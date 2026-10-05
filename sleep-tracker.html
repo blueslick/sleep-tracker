@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sleep Tracker</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #090c14;
+    --card: #121724;
+    --card2: #181f30;
+    --line: #232b40;
+    --line2: #34405d;
+    --text: #d3d8e6;
+    --muted: #8590a8;
+    --bed: #3d4fb3;
+    --bed-text: #e9ecff;
+    --wake: #b9772a;
+    --wake-text: #fff2df;
+    --bar: #6a86ee;
+    --bar-we: #a578dc;
+    --bar-text: #0b1020;
+    --warn: #f0b04a;
+    --danger: #ee6b6b;
+    --info: #7fb2ff;
+    --shadow: 0 6px 24px rgba(0, 0, 0, .35);
+  }
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --bg: #f2f4fa;
+    --card: #ffffff;
+    --card2: #eef1f8;
+    --line: #dde2ee;
+    --line2: #c3cadc;
+    --text: #1d2333;
+    --muted: #5d667d;
+    --bed: #4156c9;
+    --bed-text: #ffffff;
+    --wake: #e08a1e;
+    --wake-text: #ffffff;
+    --bar: #5875e6;
+    --bar-we: #9561d4;
+    --bar-text: #ffffff;
+    --warn: #a86400;
+    --danger: #c53434;
+    --info: #2a64c5;
+    --shadow: 0 6px 24px rgba(30, 40, 80, .12);
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  main { max-width: 860px; margin: 0 auto; padding: 16px 16px 80px; }
+
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 4px 0 16px; }
+  h1 { font-size: 1.5rem; margin: 0; letter-spacing: .2px; white-space: nowrap; }
+  #themeBtn { white-space: nowrap; padding: 8px 12px; }
+  h2 { font-size: 1.15rem; margin: 0 0 12px; }
+  h3 { font-size: 1rem; margin: 20px 0 8px; }
+  .muted { color: var(--muted); }
+  .small { font-size: .85rem; }
+
+  button {
+    font: inherit; color: inherit; cursor: pointer;
+    background: var(--card2); border: 1px solid var(--line2); border-radius: 12px;
+    padding: 10px 16px; min-height: 44px;
+  }
+  button:hover { border-color: var(--muted); }
+  button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid var(--info); outline-offset: 2px; }
+  button.primary { background: var(--bed); border-color: transparent; color: var(--bed-text); font-weight: 600; }
+  button.danger { color: var(--danger); }
+  button.ghost { background: transparent; }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 18px; margin-top: 16px; }
+
+  /* Big buttons */
+  .press { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .big {
+    min-height: 150px; border: 0; border-radius: 24px; font-size: 1.75rem; font-weight: 700;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+    box-shadow: var(--shadow); transition: transform .08s ease, filter .15s ease;
+  }
+  .big:hover { filter: brightness(1.1); }
+  .big:active { transform: scale(.97); }
+  .big .icon { font-size: 2.4rem; line-height: 1; }
+  .big small { font-size: .95rem; font-weight: 500; opacity: .85; }
+  #btnBed { background: var(--bed); color: var(--bed-text); }
+  #btnWake { background: var(--wake); color: var(--wake-text); }
+  .status { margin: 14px 4px 0; text-align: center; min-height: 1.4em; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 20px; transform: translate(-50%, 30px); opacity: 0; pointer-events: none;
+    max-width: min(560px, calc(100vw - 32px)); padding: 12px 18px; border-radius: 14px;
+    background: var(--card2); border: 1px solid var(--line2); box-shadow: var(--shadow);
+    transition: opacity .2s, transform .2s; z-index: 50;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  .toast.warn { border-color: var(--warn); }
+  .toast.error { border-color: var(--danger); }
+
+  .banner { background: var(--card2); border: 1px solid var(--warn); color: var(--warn); border-radius: 12px; padding: 10px 14px; margin-bottom: 12px; }
+
+  /* Segmented filter */
+  .seg { display: inline-flex; border: 1px solid var(--line2); border-radius: 12px; overflow: hidden; }
+  .seg button { border: 0; border-radius: 0; background: transparent; }
+  .seg button + button { border-left: 1px solid var(--line2); }
+  .seg button[aria-pressed="true"] { background: var(--bed); color: var(--bed-text); font-weight: 600; }
+  .toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+
+  /* Chart (plain HTML so text stays readable on small screens) */
+  .chartscroll { max-height: 560px; overflow-y: auto; }
+  .axis, .crow { display: grid; grid-template-columns: 74px 1fr; gap: 8px; align-items: center; }
+  .axis { position: sticky; top: 0; z-index: 2; background: var(--card); height: 22px; }
+  .axis .ticks { position: relative; height: 100%; }
+  .axis .ticks span { position: absolute; top: 2px; font-size: .75rem; color: var(--muted); transform: translateX(-50%); white-space: nowrap; }
+  .axis .ticks span:first-child { transform: none; }
+  .axis .ticks span:last-child { transform: translateX(-100%); }
+  .crow { margin: 5px 0; }
+  .clabel { font-size: .78rem; color: var(--muted); text-align: right; white-space: nowrap; }
+  .ctrack {
+    position: relative; height: 28px; border-radius: 6px; background-color: var(--card2);
+    border-right: 1px solid var(--line2);
+    background-image:
+      linear-gradient(to right, var(--line2) 1px, transparent 1px),
+      linear-gradient(to right, var(--line) 1px, transparent 1px);
+    background-size: 20% 100%, calc(100% / 15) 100%;
+  }
+  .bar {
+    position: absolute; top: 3px; bottom: 3px; border-radius: 6px; background: var(--bar); color: var(--bar-text);
+    font-size: .72rem; font-weight: 600; display: flex; align-items: center; justify-content: center;
+    overflow: hidden; white-space: nowrap; cursor: pointer; padding: 0 4px; border: 0; min-height: 0;
+  }
+  .bar.we { background: var(--bar-we); }
+  .bar.cl { border-top-left-radius: 0; border-bottom-left-radius: 0; }
+  .bar.cr { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+  .dot {
+    position: absolute; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%;
+    border: 2px solid var(--warn); background: var(--card); cursor: pointer; padding: 0; min-height: 0;
+  }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 12px; color: var(--muted); font-size: .82rem; }
+  .legend i { display: inline-block; width: 14px; height: 10px; border-radius: 3px; vertical-align: -1px; margin-right: 5px; }
+  .legend i.dotl { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--warn); background: transparent; }
+
+  /* Stats */
+  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .tile { background: var(--card2); border-radius: 14px; padding: 14px; }
+  .tile .k { color: var(--muted); font-size: .82rem; }
+  .tile .v { font-size: 1.7rem; font-weight: 700; margin: 2px 0; }
+  .tile .s { font-size: .85rem; color: var(--muted); }
+  table.cmp { width: 100%; border-collapse: collapse; }
+  table.cmp th, table.cmp td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); font-weight: 400; }
+  table.cmp th { color: var(--muted); font-size: .82rem; }
+  table.cmp td:first-child { font-weight: 600; }
+  .tablewrap { overflow-x: auto; }
+
+  /* History */
+  .hrow { background: var(--card2); border-radius: 14px; padding: 12px 14px; margin-top: 10px; border: 1px solid transparent; }
+  .hrow.flagged { border-color: var(--warn); }
+  .hhead { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; justify-content: space-between; }
+  .hhead strong { font-size: 1.02rem; }
+  .pills { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pill { font-size: .75rem; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--warn); color: var(--warn); white-space: nowrap; }
+  .pill.info { border-color: var(--info); color: var(--info); }
+  .hgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px 14px; margin-top: 10px; }
+  .hgrid .k { display: block; color: var(--muted); font-size: .75rem; }
+  .hgrid .v { font-weight: 600; }
+  .hgrid .e { display: block; color: var(--muted); font-size: .8rem; }
+  .hnote { margin: 8px 0 0; font-size: .82rem; color: var(--warn); }
+  .acts { display: flex; gap: 8px; margin-top: 10px; }
+  .acts button { min-height: 38px; padding: 6px 14px; }
+
+  /* Forms */
+  label { display: block; margin: 12px 0 4px; font-weight: 600; font-size: .92rem; }
+  input[type="number"], input[type="datetime-local"], select {
+    font: inherit; color: var(--text); background: var(--card2); border: 1px solid var(--line2);
+    border-radius: 10px; padding: 9px 10px; min-height: 44px; max-width: 100%;
+  }
+  input[type="number"] { width: 110px; }
+  .settings { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 4px 16px; }
+  .inrow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .btnrow { display: flex; flex-wrap: wrap; gap: 10px; }
+
+  dialog {
+    background: var(--card); color: var(--text); border: 1px solid var(--line2); border-radius: 20px;
+    padding: 20px; width: min(440px, calc(100vw - 24px)); box-shadow: var(--shadow);
+  }
+  dialog::backdrop { background: rgba(0, 0, 0, .6); }
+  .dlgBtns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; align-items: center; }
+  .spacer { flex: 1; }
+  .error { color: var(--danger); min-height: 1.3em; margin: 10px 0 0; }
+
+  @media (max-width: 600px) {
+    .press { grid-template-columns: 1fr; }
+    .big { min-height: 120px; }
+    .tiles { grid-template-columns: 1fr; }
+    .hgrid { grid-template-columns: 1fr 1fr; }
+    .axis, .crow { grid-template-columns: 64px 1fr; }
+    .card { padding: 14px; }
+    h1 { font-size: 1.3rem; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>🌙 Sleep Tracker</h1>
+    <button id="themeBtn" type="button" aria-label="Switch between dark and light mode"></button>
+  </header>
+
+  <div id="storageWarn" class="banner" hidden>
+    Your browser is blocking storage for this page, so nothing will be saved after you close it.
+    Use "Export CSV" below to keep a copy.
+  </div>
+
+  <section class="press" aria-label="Record sleep">
+    <button id="btnBed" class="big" type="button"><span class="icon">🌙</span>Going to bed<small>Press when you lie down</small></button>
+    <button id="btnWake" class="big" type="button"><span class="icon">☀️</span>Just woke up<small>Press when you wake</small></button>
+  </section>
+  <p id="status" class="status muted"></p>
+
+  <section class="card" aria-label="Chart and statistics">
+    <div class="toolbar">
+      <h2 style="margin:0">Overview</h2>
+      <div class="seg" id="rangeSeg" role="group" aria-label="Time range">
+        <button type="button" data-range="7">7 days</button>
+        <button type="button" data-range="30">30 days</button>
+        <button type="button" data-range="all">All time</button>
+      </div>
+    </div>
+
+    <div id="chart"></div>
+
+    <h3>Statistics</h3>
+    <div id="stats"></div>
+  </section>
+
+  <section class="card" aria-label="History">
+    <div class="toolbar">
+      <h2 style="margin:0">History</h2>
+      <button type="button" id="addBtn" class="primary">+ Add a night</button>
+    </div>
+    <div id="history"></div>
+  </section>
+
+  <section class="card" aria-label="Settings">
+    <h2>Settings</h2>
+    <div class="settings">
+      <div>
+        <label for="setSleep">Minutes to fall asleep</label>
+        <input id="setSleep" type="number" min="0" max="600" step="1" inputmode="numeric">
+      </div>
+      <div>
+        <label for="setWake">Minutes awake before pressing</label>
+        <input id="setWake" type="number" min="0" max="600" step="1" inputmode="numeric">
+      </div>
+      <div>
+        <label for="setWeekend">Weekend nights</label>
+        <select id="setWeekend">
+          <option value="friSat">Friday &amp; Saturday</option>
+          <option value="satSun">Saturday &amp; Sunday</option>
+        </select>
+      </div>
+    </div>
+    <p class="muted small" id="settingsNote"></p>
+    <p class="muted small">Changing these recalculates everything instantly. Your saved button-press times are never altered.</p>
+  </section>
+
+  <section class="card" aria-label="Backup">
+    <h2>Backup</h2>
+    <div class="btnrow">
+      <button type="button" id="exportBtn">⬇ Export CSV</button>
+      <button type="button" id="importBtn">⬆ Import CSV</button>
+      <input type="file" id="importFile" accept=".csv,text/csv" hidden>
+    </div>
+    <p class="muted small">
+      Your data lives only in this browser, on this computer. Export a CSV now and then, and keep this HTML file
+      in the same place so your browser finds your data again. The CSV holds your raw press times;
+      the two offsets above are settings and are not stored in it.
+    </p>
+  </section>
+</main>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<dialog id="editDlg">
+  <form id="editForm" novalidate>
+    <h2 id="editTitle">Edit night</h2>
+    <label for="edBed">Went to bed</label>
+    <div class="inrow">
+      <input type="datetime-local" id="edBed">
+      <button type="button" class="ghost" data-clear="edBed">Clear</button>
+    </div>
+    <label for="edWake">Woke up</label>
+    <div class="inrow">
+      <input type="datetime-local" id="edWake">
+      <button type="button" class="ghost" data-clear="edWake">Clear</button>
+    </div>
+    <p id="edPreview" class="muted small"></p>
+    <p id="edError" class="error" role="alert"></p>
+    <div class="dlgBtns">
+      <button type="button" id="edDelete" class="danger">Delete</button>
+      <span class="spacer"></span>
+      <button type="button" id="edCancel">Cancel</button>
+      <button type="submit" class="primary">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="importDlg">
+  <h2>Import CSV</h2>
+  <p id="importInfo"></p>
+  <p class="muted small">Tip: export a CSV first if you want a copy of what you have now.</p>
+  <div class="dlgBtns">
+    <button type="button" id="impMerge" class="primary">Merge with current data</button>
+    <button type="button" id="impReplace" class="danger">Replace all current data</button>
+    <span class="spacer"></span>
+    <button type="button" id="impCancel">Cancel</button>
+  </div>
+</dialog>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---------- constants & storage ---------- */
+  var KEY_ENTRIES = 'sleepTracker.entries.v1';
+  var KEY_SETTINGS = 'sleepTracker.settings.v1';
+  var MIN = 60000, DAY = 86400000;
+  var WD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  var DEFAULTS = { sleepOffset: 30, wakeOffset: 18, weekend: 'friSat', range: '30', theme: '' };
+
+  var memory = {};
+  function readStore(key, fallback) {
+    var raw = null;
+    try { raw = localStorage.getItem(key); }
+    catch (e) { document.getElementById('storageWarn').hidden = false; return memory[key] !== undefined ? memory[key] : fallback; }
+    if (raw === null) return fallback;
+    try { return JSON.parse(raw); }
+    catch (e) {
+      // Corrupt data: keep a copy rather than silently overwriting it.
+      try { localStorage.setItem(key + '.corrupt', raw); } catch (e2) {}
+      return fallback;
+    }
+  }
+  function writeStore(key, value) {
+    memory[key] = value;
+    try { localStorage.setItem(key, JSON.stringify(value)); }
+    catch (e) { document.getElementById('storageWarn').hidden = false; }
+  }
+
+  function num(v) { return typeof v === 'number' && isFinite(v) ? v : null; }
+  var entries = (function () {
+    var raw = readStore(KEY_ENTRIES, []);
+    if (!Array.isArray(raw)) return [];
+    return raw.map(function (x) {
+      return x && { id: String(x.id || newId()), bed: num(x.bed), wake: num(x.wake) };
+    }).filter(function (x) { return x && (x.bed !== null || x.wake !== null); });
+  })();
+  var settings = (function () {
+    var s = Object.assign({}, DEFAULTS, readStore(KEY_SETTINGS, {}));
+    if (num(s.sleepOffset) === null) s.sleepOffset = DEFAULTS.sleepOffset;
+    if (num(s.wakeOffset) === null) s.wakeOffset = DEFAULTS.wakeOffset;
+    if (s.weekend !== 'satSun') s.weekend = 'friSat';
+    if (['7', '30', 'all'].indexOf(s.range) < 0) s.range = DEFAULTS.range;
+    return s;
+  })();
+  function persistEntries() { writeStore(KEY_ENTRIES, entries); }
+  function persistSettings() { writeStore(KEY_SETTINGS, settings); }
+  function newId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+
+  /* ---------- date & format helpers ---------- */
+  function pad(n) { return String(n).padStart(2, '0'); }
+  function dateKey(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+
+  // The night a bed press belongs to: before noon counts as the previous calendar date.
+  function nightOfBed(ts) {
+    var d = new Date(ts);
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate() - (d.getHours() < 12 ? 1 : 0));
+  }
+  // A wake press with no bed press belongs to the night before the wake date.
+  function nightOfWake(ts) {
+    var d = new Date(ts);
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1);
+  }
+  function nightOf(e) { return e.bed !== null ? nightOfBed(e.bed) : nightOfWake(e.wake); }
+  function nightKey(e) { return dateKey(nightOf(e)); }
+
+  function fmtDay(d) { return WD[d.getDay()] + ', ' + MON[d.getMonth()] + ' ' + d.getDate(); }
+  function fmtDayShort(d) { return WD[d.getDay()] + ' ' + MON[d.getMonth()] + ' ' + d.getDate(); }
+  function fmtClock(minutes, withSec, secs) {
+    var m = Math.round(minutes) % 1440; if (m < 0) m += 1440;
+    var h = Math.floor(m / 60), mm = m % 60, ap = h >= 12 ? 'pm' : 'am';
+    return (h % 12 || 12) + ':' + pad(mm) + (withSec ? ':' + pad(secs) : '') + ' ' + ap;
+  }
+  function fmtTime(ts, withSec) {
+    var d = new Date(ts);
+    var h = d.getHours(), ap = h >= 12 ? 'pm' : 'am';
+    return (h % 12 || 12) + ':' + pad(d.getMinutes()) + (withSec ? ':' + pad(d.getSeconds()) : '') + ' ' + ap;
+  }
+  function fmtDur(mins) {
+    var m = Math.round(mins), h = Math.floor(m / 60);
+    return h + 'h ' + pad(m % 60) + 'm';
+  }
+  function minuteOfDay(ts) { var d = new Date(ts); return d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60; }
+  // Minutes since a pivot time of day, so times either side of midnight average sensibly.
+  function shifted(ts, pivot) { return (((minuteOfDay(ts) - pivot) % 1440) + 1440) % 1440; }
+
+  function isoLocal(ts) {
+    var d = new Date(ts), off = -d.getTimezoneOffset(), a = Math.abs(off);
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' +
+      pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds()) + '.' +
+      String(d.getMilliseconds()).padStart(3, '0') + (off >= 0 ? '+' : '-') + pad(Math.floor(a / 60)) + ':' + pad(a % 60);
+  }
+  function toInput(ts) {
+    if (ts === null) return '';
+    var d = new Date(ts);
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  }
+  // Keep the exact original timestamp if the user did not change the field (inputs only hold minutes).
+  function fromInput(str, original) {
+    if (!str) return null;
+    if (original !== null && original !== undefined && toInput(original) === str) return original;
+    var t = new Date(str).getTime();
+    return isFinite(t) ? t : NaN;
+  }
+
+  /* ---------- calculations ---------- */
+  function isWeekend(nightDate) {
+    var d = nightDate.getDay();
+    return settings.weekend === 'satSun' ? (d === 6 || d === 0) : (d === 5 || d === 6);
+  }
+
+  // Works out estimates and problems for one entry. Only `valid` entries feed chart bars and stats.
+  function analyze(e) {
+    var r = { e: e, night: nightOf(e), flags: [], valid: false, inProgress: false };
+    var now = Date.now();
+    r.weekend = isWeekend(r.night);
+    if (e.bed !== null) r.estSleep = e.bed + settings.sleepOffset * MIN;
+    if (e.wake !== null) r.estWake = e.wake - settings.wakeOffset * MIN;
+
+    if (e.bed === null) r.flags.push('Missing bed time');
+    else if (e.wake === null) {
+      if (e.bed <= now && now - e.bed <= DAY) r.inProgress = true;
+      else r.flags.push('Missing wake time');
+    }
+    if (e.bed !== null && e.wake !== null) {
+      if (e.wake <= e.bed) r.flags.push('Wake is before bed');
+      else if (r.estWake <= r.estSleep) r.flags.push('Offsets leave no sleep');
+      else {
+        r.valid = true;
+        r.dur = (r.estWake - r.estSleep) / MIN;
+        if (r.dur > 16 * 60) r.warn = 'Unusually long, check times';
+        else if (r.dur < 60) r.warn = 'Very short, check times';
+      }
+    }
+    return r;
+  }
+
+  function meanSd(a) {
+    var n = a.length, m = a.reduce(function (s, x) { return s + x; }, 0) / n;
+    var sd = n > 1 ? Math.sqrt(a.reduce(function (s, x) { return s + (x - m) * (x - m); }, 0) / (n - 1)) : null;
+    return { mean: m, sd: sd };
+  }
+  function summarize(list) {
+    if (!list.length) return null;
+    var dur = meanSd(list.map(function (r) { return r.dur; }));
+    var bed = meanSd(list.map(function (r) { return shifted(r.estSleep, 720); }));   // noon-to-noon
+    var wake = meanSd(list.map(function (r) { return shifted(r.estWake, 1080); }));  // 6pm-to-6pm
+    return {
+      n: list.length, dur: dur.mean,
+      bed: (bed.mean + 720) % 1440, bedSd: bed.sd,
+      wake: (wake.mean + 1080) % 1440, wakeSd: wake.sd
+    };
+  }
+
+  function inRange(e) {
+    if (settings.range === 'all') return true;
+    var ref = e.bed !== null ? e.bed : e.wake;
+    return ref >= Date.now() - Number(settings.range) * DAY;
+  }
+  function sortedEntries() {
+    return entries.slice().sort(function (a, b) {
+      return (a.bed !== null ? a.bed : a.wake) - (b.bed !== null ? b.bed : b.wake);
+    });
+  }
+
+  /* ---------- toast ---------- */
+  var toastEl = document.getElementById('toast'), toastTimer;
+  function toast(msg, kind) {
+    toastEl.textContent = msg;
+    toastEl.className = 'toast show' + (kind ? ' ' + kind : '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, 8000);
+  }
+
+  /* ---------- button presses ---------- */
+  function findByNight(key, exceptId) {
+    return entries.find(function (e) { return e.id !== exceptId && nightKey(e) === key; });
+  }
+
+  function pressBed() {
+    var now = Date.now();
+    var key = dateKey(nightOfBed(now));
+    var ex = findByNight(key);
+    if (ex) {
+      if (ex.bed !== null && !confirm('You already have a bed time of ' + fmtTime(ex.bed) + ' for the night of ' +
+          fmtDay(nightOf(ex)) + '.\n\nReplace it with ' + fmtTime(now) + '?')) return;
+      ex.bed = now;
+    } else {
+      var stale = entries.filter(function (e) { return e.bed !== null && e.wake === null; });
+      entries.push({ id: newId(), bed: now, wake: null });
+      if (stale.length) {
+        persistEntries(); render();
+        toast('Saved bed time ' + fmtTime(now, true) + '. Heads-up: an earlier night has no wake time. Look for the ⚠ in History.', 'warn');
+        return;
+      }
+    }
+    persistEntries(); render();
+    toast('Saved: went to bed at ' + fmtTime(now, true) + '. Counted as asleep from ' + fmtTime(now + settings.sleepOffset * MIN) + '. Sleep well!');
+  }
+
+  function pressWake() {
+    var now = Date.now();
+    var open = entries.filter(function (e) {
+      return e.bed !== null && e.wake === null && e.bed <= now && now - e.bed <= DAY;
+    }).sort(function (a, b) { return b.bed - a.bed; })[0];
+
+    if (open) {
+      open.wake = now;
+      persistEntries(); render();
+      var r = analyze(open);
+      toast('Saved: woke up at ' + fmtTime(now, true) + (r.valid ? '. Slept about ' + fmtDur(r.dur) + '.' : '. Check this night in History.'), r.valid ? '' : 'warn');
+      return;
+    }
+    var ex = findByNight(dateKey(nightOfWake(now)));
+    if (ex) {
+      if (ex.wake !== null && !confirm('You already have a wake time of ' + fmtTime(ex.wake) + ' for the night of ' +
+          fmtDay(nightOf(ex)) + '.\n\nReplace it with ' + fmtTime(now) + '?')) return;
+      ex.wake = now;
+      persistEntries(); render();
+      toast('Saved wake time ' + fmtTime(now, true) + '.');
+      return;
+    }
+    entries.push({ id: newId(), bed: null, wake: now });
+    persistEntries(); render();
+    toast('Saved wake time ' + fmtTime(now, true) + ', but there was no "Going to bed" press. ' +
+      'It is flagged ⚠ in History: tap Edit to add the bed time.', 'warn');
+  }
+
+  /* ---------- rendering ---------- */
+  function renderStatus() {
+    var el = document.getElementById('status');
+    var list = sortedEntries().map(analyze);
+    var last = list[list.length - 1];
+    if (!last) { el.textContent = 'No nights recorded yet. Press a button to start.'; return; }
+    if (last.inProgress) {
+      var ago = Math.floor((Date.now() - last.e.bed) / MIN);
+      el.textContent = 'Sleeping since ' + fmtTime(last.e.bed) + ' (' + fmtDur(ago) + ' ago). Press "Just woke up" when you are up.';
+    } else if (last.valid) {
+      el.textContent = 'Latest night (' + fmtDay(last.night) + '): about ' + fmtDur(last.dur) +
+        ', ' + fmtTime(last.estSleep) + ' to ' + fmtTime(last.estWake) + '.';
+    } else {
+      el.textContent = 'Latest entry (' + fmtDay(last.night) + ') needs attention: ' + last.flags.join(', ').toLowerCase() + '.';
+    }
+  }
+
+  function tickLabels() { return ['9pm', '12am', '3am', '6am', '9am', '12pm']; }
+
+  function renderChart() {
+    var host = document.getElementById('chart');
+    var list = sortedEntries().filter(inRange).map(analyze);
+    if (!list.length) { host.innerHTML = '<p class="muted">Nothing to show for this period yet.</p>'; return; }
+    var SPAN = 15 * 60 * MIN;
+    var html = '<div class="chartscroll" id="chartScroll"><div class="axis"><div></div><div class="ticks">';
+    tickLabels().forEach(function (t, i) { html += '<span style="left:' + (i * 20) + '%">' + t + '</span>'; });
+    html += '</div></div>';
+    list.forEach(function (r) {
+      var anchor = new Date(r.night.getFullYear(), r.night.getMonth(), r.night.getDate(), 21, 0).getTime();
+      var x = function (ts) { return (ts - anchor) / SPAN * 100; };
+      html += '<div class="crow"><div class="clabel">' + fmtDayShort(r.night) + '</div><div class="ctrack">';
+      if (r.valid) {
+        var a = x(r.estSleep), b = x(r.estWake);
+        var cl = a < 0, cr = b > 100;
+        a = Math.max(0, Math.min(100, a)); b = Math.max(0, Math.min(100, b));
+        var w = Math.max(b - a, 0.8);
+        var tip = fmtDay(r.night) + ': ' + fmtTime(r.estSleep) + ' to ' + fmtTime(r.estWake) + ' (' + fmtDur(r.dur) + ')';
+        html += '<button type="button" class="bar' + (r.weekend ? ' we' : '') + (cl ? ' cl' : '') + (cr ? ' cr' : '') +
+          '" data-edit="' + r.e.id + '" style="left:' + a + '%;width:' + w + '%" title="' + tip + '" aria-label="' + tip + '">' +
+          (w > 14 ? fmtDur(r.dur) : '') + '</button>';
+      } else {
+        [['bed', 'Bed'], ['wake', 'Wake']].forEach(function (p) {
+          var ts = r.e[p[0]];
+          if (ts === null) return;
+          var pos = Math.max(0, Math.min(100, x(ts)));
+          var tip = p[1] + ' press ' + fmtTime(ts) + ' (' + (r.flags.concat(r.inProgress ? ['In progress'] : [])).join(', ') + ')';
+          html += '<button type="button" class="dot" data-edit="' + r.e.id + '" style="left:' + pos + '%" title="' + tip + '" aria-label="' + tip + '"></button>';
+        });
+      }
+      html += '</div></div>';
+    });
+    html += '</div><div class="legend">' +
+      '<span><i style="background:var(--bar)"></i>Weekday night</span>' +
+      '<span><i style="background:var(--bar-we)"></i>Weekend night</span>' +
+      '<span><i class="dotl"></i>Incomplete night (raw press shown)</span>' +
+      '<span>Bars show estimated sleep. Tap one to edit.</span></div>';
+    host.innerHTML = html;
+    var sc = document.getElementById('chartScroll');
+    sc.scrollTop = sc.scrollHeight;
+  }
+
+  function sdText(sd) { return sd === null ? 'needs 2+ nights' : '± ' + Math.round(sd) + ' min'; }
+
+  function renderStats() {
+    var host = document.getElementById('stats');
+    var valid = sortedEntries().filter(inRange).map(analyze).filter(function (r) { return r.valid; });
+    var all = summarize(valid);
+    if (!all) {
+      host.innerHTML = '<p class="muted">Statistics appear once you have a complete night (bed and wake) in this period.</p>';
+      return;
+    }
+    var html = '<div class="tiles">' +
+      '<div class="tile"><div class="k">Average sleep</div><div class="v">' + fmtDur(all.dur) + '</div><div class="s">across ' + all.n + ' night' + (all.n === 1 ? '' : 's') + '</div></div>' +
+      '<div class="tile"><div class="k">Average bedtime</div><div class="v">' + fmtClock(all.bed) + '</div><div class="s">varies ' + sdText(all.bedSd) + '</div></div>' +
+      '<div class="tile"><div class="k">Average wake time</div><div class="v">' + fmtClock(all.wake) + '</div><div class="s">varies ' + sdText(all.wakeSd) + '</div></div>' +
+      '</div>';
+    var wd = summarize(valid.filter(function (r) { return !r.weekend; }));
+    var we = summarize(valid.filter(function (r) { return r.weekend; }));
+    var row = function (label, s) {
+      return s ? '<tr><td>' + label + '</td><td>' + s.n + '</td><td>' + fmtDur(s.dur) + '</td><td>' + fmtClock(s.bed) + '</td><td>' + fmtClock(s.wake) + '</td></tr>'
+               : '<tr><td>' + label + '</td><td>0</td><td colspan="3" class="muted">no data</td></tr>';
+    };
+    var wkLabel = settings.weekend === 'satSun' ? 'Sat &amp; Sun nights' : 'Fri &amp; Sat nights';
+    html += '<h3>Weekday vs weekend</h3><div class="tablewrap"><table class="cmp"><thead><tr><th></th><th>Nights</th><th>Avg sleep</th><th>Avg bedtime</th><th>Avg wake</th></tr></thead><tbody>' +
+      row('Weekday nights', wd) + row('Weekend nights (' + wkLabel + ')', we) + '</tbody></table></div>' +
+      '<p class="muted small">"Varies ±" is the standard deviation: roughly how many minutes your times typically drift from the average. ' +
+      'Only complete nights are counted. Times use your estimated sleep and wake times.</p>';
+    host.innerHTML = html;
+  }
+
+  function renderHistory() {
+    var host = document.getElementById('history');
+    var list = sortedEntries().map(analyze).reverse();
+    if (!list.length) { host.innerHTML = '<p class="muted">No entries yet. Press a button above, or add a night manually.</p>'; return; }
+    host.innerHTML = list.map(function (r) {
+      var pills = r.flags.map(function (f) { return '<span class="pill">⚠ ' + f + '</span>'; });
+      if (r.warn) pills.push('<span class="pill">⚠ ' + r.warn + '</span>');
+      if (r.inProgress) pills.push('<span class="pill info">In progress</span>');
+      var bed = r.e.bed !== null
+        ? '<span class="v" title="' + isoLocal(r.e.bed) + '">' + fmtTime(r.e.bed) + '</span><span class="e">counted ' + fmtTime(r.estSleep) + '</span>'
+        : '<span class="v muted">none</span>';
+      var wake = r.e.wake !== null
+        ? '<span class="v" title="' + isoLocal(r.e.wake) + '">' + fmtTime(r.e.wake) + '</span><span class="e">counted ' + fmtTime(r.estWake) + '</span>'
+        : '<span class="v muted">none</span>';
+      return '<article class="hrow' + (r.flags.length ? ' flagged' : '') + '">' +
+        '<div class="hhead"><strong>' + fmtDay(r.night) + '</strong><div class="pills">' + pills.join('') + '</div></div>' +
+        '<div class="hgrid"><div><span class="k">Pressed: bed</span>' + bed + '</div>' +
+        '<div><span class="k">Pressed: wake</span>' + wake + '</div>' +
+        '<div><span class="k">Sleep</span><span class="v">' + (r.valid ? fmtDur(r.dur) : '–') + '</span></div></div>' +
+        (r.flags.length ? '<p class="hnote">Not counted in the chart or stats until fixed.</p>' : '') +
+        '<div class="acts"><button type="button" data-edit="' + r.e.id + '">Edit</button>' +
+        '<button type="button" class="danger" data-del="' + r.e.id + '">Delete</button></div></article>';
+    }).join('');
+  }
+
+  function renderRange() {
+    Array.prototype.forEach.call(document.querySelectorAll('#rangeSeg button'), function (b) {
+      b.setAttribute('aria-pressed', String(b.dataset.range === settings.range));
+    });
+  }
+  function renderSettingsNote() {
+    document.getElementById('settingsNote').textContent =
+      'Counted as asleep = bed press + ' + settings.sleepOffset + ' min. Counted as awake = wake press − ' + settings.wakeOffset + ' min.';
+  }
+  function render() {
+    renderRange(); renderStatus(); renderChart(); renderStats(); renderHistory(); renderSettingsNote();
+  }
+
+  /* ---------- edit dialog ---------- */
+  var editDlg = document.getElementById('editDlg');
+  var edBed = document.getElementById('edBed'), edWake = document.getElementById('edWake');
+  var edError = document.getElementById('edError'), edPreview = document.getElementById('edPreview');
+  var editing = null; // entry being edited, or null when adding
+
+  function openEdit(id) {
+    editing = id ? entries.find(function (e) { return e.id === id; }) || null : null;
+    document.getElementById('editTitle').textContent = editing ? 'Edit night' : 'Add a night';
+    document.getElementById('edDelete').hidden = !editing;
+    if (editing) {
+      edBed.value = toInput(editing.bed); edWake.value = toInput(editing.wake);
+    } else {
+      var d = new Date();
+      var bed = new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1, 23, 0).getTime();
+      var wake = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 7, 0).getTime();
+      edBed.value = toInput(bed); edWake.value = toInput(wake);
+    }
+    edError.textContent = '';
+    updatePreview();
+    editDlg.showModal();
+  }
+  function readForm() {
+    var orig = editing || { bed: null, wake: null };
+    return { bed: fromInput(edBed.value, orig.bed), wake: fromInput(edWake.value, orig.wake) };
+  }
+  function updatePreview() {
+    var f = readForm();
+    if (Number.isNaN(f.bed) || Number.isNaN(f.wake) || (f.bed === null && f.wake === null)) { edPreview.textContent = ''; return; }
+    var r = analyze({ id: 'x', bed: f.bed, wake: f.wake });
+    edPreview.textContent = 'Night of ' + fmtDay(r.night) + (r.valid
+      ? ': counted ' + fmtTime(r.estSleep) + ' to ' + fmtTime(r.estWake) + ' (' + fmtDur(r.dur) + ').'
+      : '. This will be flagged: ' + (r.flags.join(', ').toLowerCase() || 'in progress') + '.');
+  }
+  edBed.addEventListener('input', updatePreview);
+  edWake.addEventListener('input', updatePreview);
+  editDlg.addEventListener('click', function (ev) {
+    var c = ev.target.getAttribute && ev.target.getAttribute('data-clear');
+    if (c) { document.getElementById(c).value = ''; updatePreview(); }
+  });
+  document.getElementById('edCancel').addEventListener('click', function () { editDlg.close(); });
+  document.getElementById('edDelete').addEventListener('click', function () {
+    if (editing && confirm('Delete the night of ' + fmtDay(nightOf(editing)) + '?')) { removeEntry(editing.id); editDlg.close(); }
+  });
+  document.getElementById('editForm').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var f = readForm();
+    if (Number.isNaN(f.bed) || Number.isNaN(f.wake)) { edError.textContent = 'One of the dates is not valid.'; return; }
+    if (f.bed === null && f.wake === null) { edError.textContent = 'Enter at least a bed time or a wake time.'; return; }
+    if (f.bed !== null && f.wake !== null && f.wake <= f.bed) { edError.textContent = 'Wake time must be after the bed time.'; return; }
+    var id = editing ? editing.id : null;
+    var clash = findByNight(nightKey({ bed: f.bed, wake: f.wake }), id);
+    if (clash) {
+      edError.textContent = 'There is already an entry for the night of ' + fmtDay(nightOf(clash)) + ' (one sleep per night). Edit or delete that one instead.';
+      return;
+    }
+    if (editing) { editing.bed = f.bed; editing.wake = f.wake; }
+    else entries.push({ id: newId(), bed: f.bed, wake: f.wake });
+    persistEntries(); render(); editDlg.close();
+    toast('Saved.');
+  });
+
+  function removeEntry(id) {
+    entries = entries.filter(function (e) { return e.id !== id; });
+    persistEntries(); render(); toast('Deleted.');
+  }
+
+  /* ---------- CSV export / import ---------- */
+  function csvCell(v) {
+    v = v === null || v === undefined ? '' : String(v);
+    return /[",\r\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+  }
+  function exportCsv() {
+    var rows = [['night', 'bed_press', 'wake_press', 'est_sleep', 'est_wake', 'sleep_minutes', 'flags']];
+    sortedEntries().forEach(function (e) {
+      var r = analyze(e);
+      rows.push([
+        dateKey(r.night),
+        e.bed !== null ? isoLocal(e.bed) : '',
+        e.wake !== null ? isoLocal(e.wake) : '',
+        r.estSleep !== undefined ? isoLocal(r.estSleep) : '',
+        r.estWake !== undefined ? isoLocal(r.estWake) : '',
+        r.valid ? Math.round(r.dur) : '',
+        r.flags.concat(r.warn ? [r.warn] : []).join('; ')
+      ]);
+    });
+    var text = rows.map(function (r) { return r.map(csvCell).join(','); }).join('\r\n') + '\r\n';
+    var blob = new Blob([text], { type: 'text/csv;charset=utf-8' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'sleep-tracker-' + dateKey(new Date()) + '.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+    toast('Exported ' + (rows.length - 1) + ' night(s). Check your Downloads folder.');
+  }
+
+  function parseCsv(text) {
+    var rows = [], row = [], cell = '', q = false, i = 0;
+    text = text.replace(/^﻿/, '');
+    for (; i < text.length; i++) {
+      var c = text[i];
+      if (q) {
+        if (c === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else q = false; }
+        else cell += c;
+      } else if (c === '"') q = true;
+      else if (c === ',') { row.push(cell); cell = ''; }
+      else if (c === '\n' || c === '\r') {
+        if (c === '\r' && text[i + 1] === '\n') i++;
+        row.push(cell); cell = ''; rows.push(row); row = [];
+      } else cell += c;
+    }
+    if (cell !== '' || row.length) { row.push(cell); rows.push(row); }
+    return rows.filter(function (r) { return r.some(function (x) { return x.trim() !== ''; }); });
+  }
+
+  var pendingImport = null;
+  function handleImportText(text) {
+    var rows = parseCsv(text);
+    if (!rows.length) { toast('That file is empty.', 'error'); return; }
+    var head = rows[0].map(function (h) { return h.trim().toLowerCase(); });
+    var iBed = head.indexOf('bed_press'), iWake = head.indexOf('wake_press');
+    if (iBed < 0 || iWake < 0) { toast('Could not find "bed_press" and "wake_press" columns. Use a file made by Export CSV.', 'error'); return; }
+    var byNight = {}, skipped = 0;
+    rows.slice(1).forEach(function (r) {
+      var b = (r[iBed] || '').trim(), w = (r[iWake] || '').trim();
+      var bed = b ? new Date(b).getTime() : null, wake = w ? new Date(w).getTime() : null;
+      if ((bed === null && wake === null) || Number.isNaN(bed) || Number.isNaN(wake)) { skipped++; return; }
+      var e = { id: newId(), bed: bed, wake: wake };
+      byNight[nightKey(e)] = e; // if the file repeats a night, the later row wins
+    });
+    var list = Object.keys(byNight).map(function (k) { return byNight[k]; });
+    if (!list.length) { toast('No usable rows found in that file.', 'error'); return; }
+    pendingImport = list;
+    document.getElementById('importInfo').textContent = 'Found ' + list.length + ' night(s) in the file' +
+      (skipped ? ' (' + skipped + ' unreadable row(s) skipped)' : '') + '. You currently have ' + entries.length + '. ' +
+      'Merge keeps your current nights and lets the file win when both have the same night.';
+    document.getElementById('importDlg').showModal();
+  }
+  function finishImport(mode) {
+    var list = pendingImport; pendingImport = null;
+    document.getElementById('importDlg').close();
+    if (!list) return;
+    if (mode === 'replace') entries = list;
+    else {
+      var map = {};
+      entries.forEach(function (e) { map[nightKey(e)] = e; });
+      list.forEach(function (e) { map[nightKey(e)] = e; });
+      entries = Object.keys(map).map(function (k) { return map[k]; });
+    }
+    persistEntries(); render();
+    toast('Imported ' + list.length + ' night(s).');
+  }
+
+  /* ---------- theme ---------- */
+  function applyTheme() {
+    var t = settings.theme || (window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+    document.documentElement.setAttribute('data-theme', t);
+    document.getElementById('themeBtn').textContent = t === 'dark' ? '☀️ Light mode' : '🌙 Dark mode';
+  }
+
+  /* ---------- wiring ---------- */
+  document.getElementById('btnBed').addEventListener('click', pressBed);
+  document.getElementById('btnWake').addEventListener('click', pressWake);
+  document.getElementById('addBtn').addEventListener('click', function () { openEdit(null); });
+  document.getElementById('themeBtn').addEventListener('click', function () {
+    settings.theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    persistSettings(); applyTheme();
+  });
+  document.getElementById('rangeSeg').addEventListener('click', function (ev) {
+    var r = ev.target.getAttribute('data-range');
+    if (r) { settings.range = r; persistSettings(); render(); }
+  });
+  document.addEventListener('click', function (ev) {
+    var t = ev.target.closest && ev.target.closest('[data-edit],[data-del]');
+    if (!t) return;
+    if (t.hasAttribute('data-edit')) openEdit(t.getAttribute('data-edit'));
+    else {
+      var e = entries.find(function (x) { return x.id === t.getAttribute('data-del'); });
+      if (e && confirm('Delete the night of ' + fmtDay(nightOf(e)) + '?')) removeEntry(e.id);
+    }
+  });
+
+  var setSleep = document.getElementById('setSleep'), setWake = document.getElementById('setWake');
+  setSleep.value = settings.sleepOffset; setWake.value = settings.wakeOffset;
+  document.getElementById('setWeekend').value = settings.weekend;
+  function offsetHandler(key, input) {
+    return function () {
+      var v = parseFloat(input.value);
+      if (!isFinite(v) || v < 0 || v > 600) return; // ignore half-typed values
+      settings[key] = v; persistSettings(); render();
+    };
+  }
+  setSleep.addEventListener('input', offsetHandler('sleepOffset', setSleep));
+  setWake.addEventListener('input', offsetHandler('wakeOffset', setWake));
+  document.getElementById('setWeekend').addEventListener('change', function (ev) {
+    settings.weekend = ev.target.value; persistSettings(); render();
+  });
+
+  document.getElementById('exportBtn').addEventListener('click', exportCsv);
+  var importFile = document.getElementById('importFile');
+  document.getElementById('importBtn').addEventListener('click', function () { importFile.click(); });
+  importFile.addEventListener('change', function () {
+    var f = importFile.files[0];
+    importFile.value = '';
+    if (!f) return;
+    var reader = new FileReader();
+    reader.onload = function () { handleImportText(String(reader.result)); };
+    reader.onerror = function () { toast('Could not read that file.', 'error'); };
+    reader.readAsText(f);
+  });
+  document.getElementById('impMerge').addEventListener('click', function () { finishImport('merge'); });
+  document.getElementById('impReplace').addEventListener('click', function () {
+    if (confirm('Replace ALL current data with the file contents?')) finishImport('replace');
+  });
+  document.getElementById('impCancel').addEventListener('click', function () {
+    pendingImport = null; document.getElementById('importDlg').close();
+  });
+
+  applyTheme();
+  render();
+  setInterval(function () { renderStatus(); }, 30000);
+})();
+</script>
+</body>
+</html>
