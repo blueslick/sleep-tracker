@@ -25,6 +25,10 @@
     --danger: #ee6b6b;
     --info: #7fb2ff;
     --shadow: 0 6px 24px rgba(0, 0, 0, .35);
+    --c-g-bg: #277a50; --c-g-fg: #effff6;
+    --c-y-bg: #b8962a; --c-y-fg: #1b1600;
+    --c-o-bg: #bf6220; --c-o-fg: #fff4e8;
+    --c-r-bg: #a93b3b; --c-r-fg: #fff0f0;
   }
   :root[data-theme="light"] {
     color-scheme: light;
@@ -46,6 +50,10 @@
     --danger: #c53434;
     --info: #2a64c5;
     --shadow: 0 6px 24px rgba(30, 40, 80, .12);
+    --c-g-bg: #4cb381; --c-g-fg: #06251a;
+    --c-y-bg: #f2d04f; --c-y-fg: #2b2200;
+    --c-o-bg: #f59a3e; --c-o-fg: #2f1600;
+    --c-r-bg: #e2625f; --c-r-fg: #2c0505;
   }
 
   * { box-sizing: border-box; }
@@ -195,7 +203,50 @@
   .spacer { flex: 1; }
   .error { color: var(--danger); min-height: 1.3em; margin: 10px 0 0; }
 
+  /* View switch */
+  .viewseg { display: flex; margin-top: 16px; }
+  .viewseg button { flex: 1; font-weight: 600; }
+
+  /* Calendar */
+  .calhead { display: grid; grid-template-columns: 52px 1fr 52px; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .calhead h2 { margin: 0; text-align: center; }
+  .calhead button { padding: 8px 0; font-size: 1.2rem; }
+  .caltoday { display: block; margin: 0 auto 12px; min-height: 36px; padding: 4px 14px; font-size: .9rem; }
+  .calgrid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+  .calgrid .dow { text-align: center; font-size: .78rem; color: var(--muted); padding: 2px 0; }
+  .day {
+    position: relative; min-height: 78px; padding: 6px 4px 4px; border-radius: 10px; border: 2px solid transparent;
+    display: flex; flex-direction: column; align-items: center; justify-content: space-between; text-align: center;
+    background: var(--card2); color: var(--muted); line-height: 1.15;
+  }
+  .day.empty { background: transparent; border: 0; pointer-events: none; min-height: 0; }
+  .day .dn { align-self: flex-start; font-size: .8rem; font-weight: 600; margin-left: 2px; }
+  .day .dur { font-size: .86rem; font-weight: 700; padding-bottom: 6px; }
+  .day .dur.note { font-size: .7rem; font-weight: 600; }
+  .day .warn { position: absolute; top: 3px; right: 4px; font-size: .85rem; line-height: 1; }
+  .day.today { border-color: var(--info); box-shadow: 0 0 0 2px var(--info); }
+  .day.today .dn { text-decoration: underline; }
+  .day.c-g { background: var(--c-g-bg); color: var(--c-g-fg); }
+  .day.c-y { background: var(--c-y-bg); color: var(--c-y-fg); }
+  .day.c-o { background: var(--c-o-bg); color: var(--c-o-fg); }
+  .day.c-r { background: var(--c-r-bg); color: var(--c-r-fg); }
+  .legend i.sw-g { background: var(--c-g-bg); }
+  .legend i.sw-y { background: var(--c-y-bg); }
+  .legend i.sw-o { background: var(--c-o-bg); }
+  .legend i.sw-r { background: var(--c-r-bg); }
+  .legend i.sw-n { background: var(--card2); border: 1px solid var(--line2); }
+  .dayrows { margin: 12px 0 0; }
+  .dayrows div { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--line); }
+  .dayrows dt { color: var(--muted); }
+  .dayrows dd { margin: 0; font-weight: 600; text-align: right; }
+
   @media (max-width: 600px) {
+    .day { min-height: 62px; padding: 4px 2px 2px; border-radius: 8px; }
+    .day .dur { font-size: .62rem; padding-bottom: 4px; white-space: nowrap; }
+    .day .dur.note { font-size: .56rem; white-space: normal; }
+    .day .dn { font-size: .72rem; }
+    .day .warn { font-size: .7rem; top: 2px; right: 2px; }
+    .calgrid { gap: 4px; }
     .press { grid-template-columns: 1fr; }
     .big { min-height: 120px; }
     .tiles { grid-template-columns: 1fr; }
@@ -224,6 +275,33 @@
   </section>
   <p id="status" class="status muted"></p>
 
+  <div class="seg viewseg" id="viewSeg" role="group" aria-label="Choose view">
+    <button type="button" data-view="main">📊 Overview</button>
+    <button type="button" data-view="cal">📅 Calendar</button>
+  </div>
+
+  <div id="viewCal" hidden>
+    <section class="card" aria-label="Calendar">
+      <div class="calhead">
+        <button type="button" id="calPrev" aria-label="Previous month">‹</button>
+        <h2 id="calTitle" aria-live="polite"></h2>
+        <button type="button" id="calNext" aria-label="Next month">›</button>
+      </div>
+      <button type="button" id="calToday" class="caltoday ghost">Go to this month</button>
+      <div class="calgrid" id="calGrid"></div>
+      <div class="legend" id="calLegend">
+        <span><i class="sw-g"></i>8h or more</span>
+        <span><i class="sw-y"></i>7 to 8h</span>
+        <span><i class="sw-o"></i>6 to 7h</span>
+        <span><i class="sw-r"></i>Under 6h</span>
+        <span><i class="sw-n"></i>No data</span>
+        <span>⚠ Incomplete or needs checking</span>
+      </div>
+      <p class="muted small">Each day shows the night that <em>starts</em> that evening. Tap a day to see details, edit, or add a night you forgot to log.</p>
+    </section>
+  </div>
+
+  <div id="viewMain">
   <section class="card" aria-label="Chart and statistics">
     <div class="toolbar">
       <h2 style="margin:0">Overview</h2>
@@ -284,9 +362,21 @@
       the two offsets above are settings and are not stored in it.
     </p>
   </section>
+  </div><!-- /viewMain -->
 </main>
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<dialog id="dayDlg">
+  <h2 id="dayTitle"></h2>
+  <div id="dayBody"></div>
+  <div class="dlgBtns">
+    <button type="button" id="dayDelete" class="danger">Delete</button>
+    <span class="spacer"></span>
+    <button type="button" id="dayClose">Close</button>
+    <button type="button" id="dayEdit" class="primary"></button>
+  </div>
+</dialog>
 
 <dialog id="editDlg">
   <form id="editForm" novalidate>
@@ -334,7 +424,7 @@
   var MIN = 60000, DAY = 86400000;
   var WD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  var DEFAULTS = { sleepOffset: 30, wakeOffset: 18, weekend: 'friSat', range: '30', theme: '' };
+  var DEFAULTS = { sleepOffset: 30, wakeOffset: 18, weekend: 'friSat', range: '30', theme: '', view: 'main' };
 
   var memory = {};
   function readStore(key, fallback) {
@@ -369,6 +459,7 @@
     if (num(s.wakeOffset) === null) s.wakeOffset = DEFAULTS.wakeOffset;
     if (s.weekend !== 'satSun') s.weekend = 'friSat';
     if (['7', '30', 'all'].indexOf(s.range) < 0) s.range = DEFAULTS.range;
+    if (s.view !== 'cal') s.view = 'main';
     return s;
   })();
   function persistEntries() { writeStore(KEY_ENTRIES, entries); }
@@ -678,8 +769,101 @@
     document.getElementById('settingsNote').textContent =
       'Counted as asleep = bed press + ' + settings.sleepOffset + ' min. Counted as awake = wake press − ' + settings.wakeOffset + ' min.';
   }
+  /* ---------- calendar ---------- */
+  var cal = (function () { var d = new Date(); return { y: d.getFullYear(), m: d.getMonth() }; })();
+  var MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+  // Colour band by estimated sleep, using whole minutes so the label and the colour always agree.
+  function sleepBand(mins) {
+    var m = Math.round(mins);
+    return m >= 480 ? 'g' : m >= 420 ? 'y' : m >= 360 ? 'o' : 'r';
+  }
+  function nightsByKey() {
+    var map = {};
+    entries.forEach(function (e) { map[nightKey(e)] = analyze(e); });
+    return map;
+  }
+  function problemText(r) {
+    return r.flags.concat(r.warn ? [r.warn] : []).join(', ');
+  }
+  function renderCalendar() {
+    document.getElementById('calTitle').textContent = MONTHS[cal.m] + ' ' + cal.y;
+    var byKey = nightsByKey(), todayKey = dateKey(new Date());
+    var lead = (new Date(cal.y, cal.m, 1).getDay() + 6) % 7; // Monday-first
+    var days = new Date(cal.y, cal.m + 1, 0).getDate();
+    var html = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(function (n) { return '<div class="dow">' + n + '</div>'; }).join('');
+    for (var i = 0; i < lead; i++) html += '<div class="day empty"></div>';
+    for (var d = 1; d <= days; d++) {
+      var date = new Date(cal.y, cal.m, d), key = dateKey(date), r = byKey[key];
+      var cls = 'day', body = '', warn = '', label = fmtDay(date) + ': ';
+      if (r && r.valid) {
+        cls += ' c-' + sleepBand(r.dur);
+        body = '<span class="dur">' + fmtDur(r.dur) + '</span>';
+        label += fmtDur(r.dur) + ' of sleep';
+      } else if (r) {
+        var note = r.inProgress ? 'Sleeping…'
+          : r.flags[0] === 'Missing wake time' ? 'Bed only'
+          : r.flags[0] === 'Missing bed time' ? 'Wake only' : 'Check';
+        body = '<span class="dur note">' + note + '</span>';
+        label += note.toLowerCase();
+      } else {
+        body = '<span class="dur"></span>';
+        label += 'no data';
+      }
+      if (r && (r.flags.length || r.warn)) {
+        warn = '<span class="warn" aria-hidden="true">⚠</span>';
+        label += ' (' + problemText(r) + ')';
+      }
+      if (key === todayKey) { cls += ' today'; label += ' (today)'; }
+      html += '<button type="button" class="' + cls + '" data-day="' + key + '" aria-label="' + label + '" title="' + label + '">' +
+        '<span class="dn">' + d + '</span>' + warn + body + '</button>';
+    }
+    document.getElementById('calGrid').innerHTML = html;
+  }
+
+  function stamp(ts) { return fmtTime(ts, true) + ', ' + fmtDayShort(new Date(ts)); }
+  var dayKeyOpen = null;
+  function openDay(key) {
+    dayKeyOpen = key;
+    var p = key.split('-'), date = new Date(+p[0], +p[1] - 1, +p[2]);
+    var e = entries.find(function (x) { return nightKey(x) === key; });
+    document.getElementById('dayTitle').textContent = 'Night of ' + fmtDay(date);
+    var body = document.getElementById('dayBody');
+    if (!e) {
+      body.innerHTML = '<p class="muted">Nothing logged for this night.</p>';
+      document.getElementById('dayEdit').textContent = '+ Add entry';
+      document.getElementById('dayDelete').hidden = true;
+    } else {
+      var r = analyze(e);
+      var rows = [
+        ['Pressed: went to bed', e.bed !== null ? stamp(e.bed) : 'none'],
+        ['Pressed: woke up', e.wake !== null ? stamp(e.wake) : 'none'],
+        ['Counted as asleep', r.estSleep !== undefined ? fmtTime(r.estSleep) : '–'],
+        ['Counted as awake', r.estWake !== undefined ? fmtTime(r.estWake) : '–'],
+        ['Estimated sleep', r.valid ? fmtDur(r.dur) : '–']
+      ];
+      var pills = r.flags.concat(r.warn ? [r.warn] : []).map(function (f) { return '<span class="pill">⚠ ' + f + '</span>'; });
+      if (r.inProgress) pills.push('<span class="pill info">In progress</span>');
+      body.innerHTML = (pills.length ? '<div class="pills">' + pills.join('') + '</div>' : '') +
+        '<dl class="dayrows">' + rows.map(function (x) { return '<div><dt>' + x[0] + '</dt><dd>' + x[1] + '</dd></div>'; }).join('') + '</dl>' +
+        (r.flags.length ? '<p class="hnote">Not counted in the chart or stats until fixed.</p>' : '');
+      document.getElementById('dayEdit').textContent = 'Edit';
+      document.getElementById('dayDelete').hidden = false;
+    }
+    document.getElementById('dayDlg').showModal();
+  }
+
+  function renderView() {
+    var showCal = settings.view === 'cal';
+    document.getElementById('viewMain').hidden = showCal;
+    document.getElementById('viewCal').hidden = !showCal;
+    Array.prototype.forEach.call(document.querySelectorAll('#viewSeg button'), function (b) {
+      b.setAttribute('aria-pressed', String(b.dataset.view === settings.view));
+    });
+  }
+
   function render() {
-    renderRange(); renderStatus(); renderChart(); renderStats(); renderHistory(); renderSettingsNote();
+    renderView(); renderRange(); renderStatus(); renderChart(); renderStats(); renderHistory(); renderSettingsNote(); renderCalendar();
   }
 
   /* ---------- edit dialog ---------- */
@@ -688,16 +872,17 @@
   var edError = document.getElementById('edError'), edPreview = document.getElementById('edPreview');
   var editing = null; // entry being edited, or null when adding
 
-  function openEdit(id) {
+  // `night` (a local-midnight Date) pre-fills a new entry for that night; default is last night.
+  function openEdit(id, night) {
     editing = id ? entries.find(function (e) { return e.id === id; }) || null : null;
     document.getElementById('editTitle').textContent = editing ? 'Edit night' : 'Add a night';
     document.getElementById('edDelete').hidden = !editing;
     if (editing) {
       edBed.value = toInput(editing.bed); edWake.value = toInput(editing.wake);
     } else {
-      var d = new Date();
-      var bed = new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1, 23, 0).getTime();
-      var wake = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 7, 0).getTime();
+      var d = night || new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate() - 1);
+      var bed = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 0).getTime();
+      var wake = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1, 7, 0).getTime();
       edBed.value = toInput(bed); edWake.value = toInput(wake);
     }
     edError.textContent = '';
@@ -854,6 +1039,38 @@
     var r = ev.target.getAttribute('data-range');
     if (r) { settings.range = r; persistSettings(); render(); }
   });
+  document.getElementById('viewSeg').addEventListener('click', function (ev) {
+    var v = ev.target.getAttribute('data-view');
+    if (v) { settings.view = v; persistSettings(); render(); }
+  });
+  function shiftMonth(n) {
+    var d = new Date(cal.y, cal.m + n, 1);
+    cal.y = d.getFullYear(); cal.m = d.getMonth(); renderCalendar();
+  }
+  document.getElementById('calPrev').addEventListener('click', function () { shiftMonth(-1); });
+  document.getElementById('calNext').addEventListener('click', function () { shiftMonth(1); });
+  document.getElementById('calToday').addEventListener('click', function () {
+    var d = new Date(); cal.y = d.getFullYear(); cal.m = d.getMonth(); renderCalendar();
+  });
+  document.getElementById('calGrid').addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-day]');
+    if (b) openDay(b.getAttribute('data-day'));
+  });
+  var dayDlg = document.getElementById('dayDlg');
+  function dayEntry() {
+    return entries.find(function (x) { return nightKey(x) === dayKeyOpen; });
+  }
+  document.getElementById('dayClose').addEventListener('click', function () { dayDlg.close(); });
+  document.getElementById('dayEdit').addEventListener('click', function () {
+    var e = dayEntry(), p = dayKeyOpen.split('-');
+    dayDlg.close();
+    if (e) openEdit(e.id); else openEdit(null, new Date(+p[0], +p[1] - 1, +p[2]));
+  });
+  document.getElementById('dayDelete').addEventListener('click', function () {
+    var e = dayEntry();
+    if (e && confirm('Delete the night of ' + fmtDay(nightOf(e)) + '?')) { dayDlg.close(); removeEntry(e.id); }
+  });
+
   document.addEventListener('click', function (ev) {
     var t = ev.target.closest && ev.target.closest('[data-edit],[data-del]');
     if (!t) return;
