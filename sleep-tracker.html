@@ -446,11 +446,26 @@
   }
 
   function num(v) { return typeof v === 'number' && isFinite(v) ? v : null; }
+
+  // Every entry has a type. 'button' = made by the Going to bed / Just woke up buttons: the stored times are
+  // raw presses and the offsets apply. 'manual' = typed in by hand: the stored times are exactly what the user
+  // recorded and no offset is ever applied. See countedTimes().
+  var TYPE_MANUAL = 'manual', TYPE_BUTTON = 'button';
+  function isExactMinute(ts) { return ts === null || ts % MIN === 0; }
+  // For entries saved before types existed. The edit form only holds whole minutes, so a manual time sits on an
+  // exact minute (:00.000), while a button press (Date.now()) almost never does.
+  function inferType(bed, wake) {
+    return isExactMinute(bed) && isExactMinute(wake) ? TYPE_MANUAL : TYPE_BUTTON;
+  }
+  var migratedTypes = false;
   var entries = (function () {
     var raw = readStore(KEY_ENTRIES, []);
     if (!Array.isArray(raw)) return [];
     return raw.map(function (x) {
-      return x && { id: String(x.id || newId()), bed: num(x.bed), wake: num(x.wake) };
+      if (!x) return null;
+      var bed = num(x.bed), wake = num(x.wake), type = x.type;
+      if (type !== TYPE_MANUAL && type !== TYPE_BUTTON) { type = inferType(bed, wake); migratedTypes = true; }
+      return { id: String(x.id || newId()), type: type, bed: bed, wake: wake };
     }).filter(function (x) { return x && (x.bed !== null || x.wake !== null); });
   })();
   var settings = (function () {
@@ -465,6 +480,7 @@
   function persistEntries() { writeStore(KEY_ENTRIES, entries); }
   function persistSettings() { writeStore(KEY_SETTINGS, settings); }
   function newId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+  if (migratedTypes) persistEntries();
 
   /* ---------- date & format helpers ---------- */
   function pad(n) { return String(n).padStart(2, '0'); }
@@ -528,13 +544,24 @@
     return settings.weekend === 'satSun' ? (d === 6 || d === 0) : (d === 5 || d === 6);
   }
 
+  // THE one place offsets are applied. Every view (status, chart, stats, history, calendar, day details, edit
+  // preview, toasts, CSV export) gets its estimated times from here, via analyze(). Only 'button' entries are
+  // shifted; 'manual' entries are returned exactly as recorded.
+  function countedTimes(e) {
+    var out = { estSleep: undefined, estWake: undefined };
+    var offsets = e.type === TYPE_BUTTON;
+    if (e.bed !== null) out.estSleep = e.bed + (offsets ? settings.sleepOffset * MIN : 0);
+    if (e.wake !== null) out.estWake = e.wake - (offsets ? settings.wakeOffset * MIN : 0);
+    return out;
+  }
+
   // Works out estimates and problems for one entry. Only `valid` entries feed chart bars and stats.
   function analyze(e) {
     var r = { e: e, night: nightOf(e), flags: [], valid: false, inProgress: false };
     var now = Date.now();
     r.weekend = isWeekend(r.night);
-    if (e.bed !== null) r.estSleep = e.bed + settings.sleepOffset * MIN;
-    if (e.wake !== null) r.estWake = e.wake - settings.wakeOffset * MIN;
+    var t = countedTimes(e);
+    r.estSleep = t.estSleep; r.estWake = t.estWake;
 
     if (e.bed === null) r.flags.push('Missing bed time');
     else if (e.wake === null) {
@@ -606,7 +633,7 @@
       ex.bed = now;
     } else {
       var stale = entries.filter(function (e) { return e.bed !== null && e.wake === null; });
-      entries.push({ id: newId(), bed: now, wake: null });
+      entries.push({ id: newId(), type: TYPE_BUTTON, bed: now, wake: null });
       if (stale.length) {
         persistEntries(); render();
         toast('Saved bed time ' + fmtTime(now, true) + '. Heads-up: an earlier night has no wake time. Look for the ⚠ in History.', 'warn');
@@ -614,7 +641,7 @@
       }
     }
     persistEntries(); render();
-    toast('Saved: went to bed at ' + fmtTime(now, true) + '. Counted as asleep from ' + fmtTime(now + settings.sleepOffset * MIN) + '. Sleep well!');
+    toast('Saved: went to bed at ' + fmtTime(now, true) + '. Counted as asleep from ' + fmtTime(countedTimes({ type: TYPE_BUTTON, bed: now, wake: null }).estSleep) + '. Sleep well!');
   }
 
   function pressWake() {
@@ -639,7 +666,7 @@
       toast('Saved wake time ' + fmtTime(now, true) + '.');
       return;
     }
-    entries.push({ id: newId(), bed: null, wake: now });
+    entries.push({ id: newId(), type: TYPE_BUTTON, bed: null, wake: now });
     persistEntries(); render();
     toast('Saved wake time ' + fmtTime(now, true) + ', but there was no "Going to bed" press. ' +
       'It is flagged ⚠ in History: tap Edit to add the bed time.', 'warn');
@@ -744,15 +771,15 @@
       if (r.warn) pills.push('<span class="pill">⚠ ' + r.warn + '</span>');
       if (r.inProgress) pills.push('<span class="pill info">In progress</span>');
       var bed = r.e.bed !== null
-        ? '<span class="v" title="' + isoLocal(r.e.bed) + '">' + fmtTime(r.e.bed) + '</span><span class="e">counted ' + fmtTime(r.estSleep) + '</span>'
+        ? '<span class="v" title="' + isoLocal(r.e.bed) + '">' + fmtTime(r.e.bed) + '</span>' + (r.e.type === TYPE_BUTTON ? '<span class="e">counted ' + fmtTime(r.estSleep) + '</span>' : '')
         : '<span class="v muted">none</span>';
       var wake = r.e.wake !== null
-        ? '<span class="v" title="' + isoLocal(r.e.wake) + '">' + fmtTime(r.e.wake) + '</span><span class="e">counted ' + fmtTime(r.estWake) + '</span>'
+        ? '<span class="v" title="' + isoLocal(r.e.wake) + '">' + fmtTime(r.e.wake) + '</span>' + (r.e.type === TYPE_BUTTON ? '<span class="e">counted ' + fmtTime(r.estWake) + '</span>' : '')
         : '<span class="v muted">none</span>';
       return '<article class="hrow' + (r.flags.length ? ' flagged' : '') + '">' +
         '<div class="hhead"><strong>' + fmtDay(r.night) + '</strong><div class="pills">' + pills.join('') + '</div></div>' +
-        '<div class="hgrid"><div><span class="k">Pressed: bed</span>' + bed + '</div>' +
-        '<div><span class="k">Pressed: wake</span>' + wake + '</div>' +
+        '<div class="hgrid"><div><span class="k">' + (r.e.type === TYPE_BUTTON ? 'Pressed: bed' : 'Entered: bed') + '</span>' + bed + '</div>' +
+        '<div><span class="k">' + (r.e.type === TYPE_BUTTON ? 'Pressed: wake' : 'Entered: wake') + '</span>' + wake + '</div>' +
         '<div><span class="k">Sleep</span><span class="v">' + (r.valid ? fmtDur(r.dur) : '–') + '</span></div></div>' +
         (r.flags.length ? '<p class="hnote">Not counted in the chart or stats until fixed.</p>' : '') +
         '<div class="acts"><button type="button" data-edit="' + r.e.id + '">Edit</button>' +
@@ -767,7 +794,7 @@
   }
   function renderSettingsNote() {
     document.getElementById('settingsNote').textContent =
-      'Counted as asleep = bed press + ' + settings.sleepOffset + ' min. Counted as awake = wake press − ' + settings.wakeOffset + ' min.';
+      'Button presses: counted as asleep = bed press + ' + settings.sleepOffset + ' min, counted as awake = wake press − ' + settings.wakeOffset + ' min. Nights you add by hand use exactly the times you enter.';
   }
   /* ---------- calendar ---------- */
   var cal = (function () { var d = new Date(); return { y: d.getFullYear(), m: d.getMonth() }; })();
@@ -836,8 +863,8 @@
     } else {
       var r = analyze(e);
       var rows = [
-        ['Pressed: went to bed', e.bed !== null ? stamp(e.bed) : 'none'],
-        ['Pressed: woke up', e.wake !== null ? stamp(e.wake) : 'none'],
+        [e.type === TYPE_BUTTON ? 'Pressed: went to bed' : 'Entered: went to bed', e.bed !== null ? stamp(e.bed) : 'none'],
+        [e.type === TYPE_BUTTON ? 'Pressed: woke up' : 'Entered: woke up', e.wake !== null ? stamp(e.wake) : 'none'],
         ['Counted as asleep', r.estSleep !== undefined ? fmtTime(r.estSleep) : '–'],
         ['Counted as awake', r.estWake !== undefined ? fmtTime(r.estWake) : '–'],
         ['Estimated sleep', r.valid ? fmtDur(r.dur) : '–']
@@ -893,10 +920,16 @@
     var orig = editing || { bed: null, wake: null };
     return { bed: fromInput(edBed.value, orig.bed), wake: fromInput(edWake.value, orig.wake) };
   }
+  // Times typed in the form are exact. A button entry stays a button entry only while its times are untouched;
+  // once the user changes a time, that time is what they recorded, so the entry becomes manual (no offsets).
+  function editedType(f) {
+    if (!editing) return TYPE_MANUAL;
+    return editing.type === TYPE_BUTTON && f.bed === editing.bed && f.wake === editing.wake ? TYPE_BUTTON : TYPE_MANUAL;
+  }
   function updatePreview() {
     var f = readForm();
     if (Number.isNaN(f.bed) || Number.isNaN(f.wake) || (f.bed === null && f.wake === null)) { edPreview.textContent = ''; return; }
-    var r = analyze({ id: 'x', bed: f.bed, wake: f.wake });
+    var r = analyze({ id: 'x', type: editedType(f), bed: f.bed, wake: f.wake });
     edPreview.textContent = 'Night of ' + fmtDay(r.night) + (r.valid
       ? ': counted ' + fmtTime(r.estSleep) + ' to ' + fmtTime(r.estWake) + ' (' + fmtDur(r.dur) + ').'
       : '. This will be flagged: ' + (r.flags.join(', ').toLowerCase() || 'in progress') + '.');
@@ -923,8 +956,8 @@
       edError.textContent = 'There is already an entry for the night of ' + fmtDay(nightOf(clash)) + ' (one sleep per night). Edit or delete that one instead.';
       return;
     }
-    if (editing) { editing.bed = f.bed; editing.wake = f.wake; }
-    else entries.push({ id: newId(), bed: f.bed, wake: f.wake });
+    if (editing) { editing.type = editedType(f); editing.bed = f.bed; editing.wake = f.wake; }
+    else entries.push({ id: newId(), type: TYPE_MANUAL, bed: f.bed, wake: f.wake });
     persistEntries(); render(); editDlg.close();
     toast('Saved.');
   });
@@ -940,7 +973,7 @@
     return /[",\r\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
   }
   function exportCsv() {
-    var rows = [['night', 'bed_press', 'wake_press', 'est_sleep', 'est_wake', 'sleep_minutes', 'flags']];
+    var rows = [['night', 'bed_press', 'wake_press', 'est_sleep', 'est_wake', 'sleep_minutes', 'flags', 'type']];
     sortedEntries().forEach(function (e) {
       var r = analyze(e);
       rows.push([
@@ -950,7 +983,8 @@
         r.estSleep !== undefined ? isoLocal(r.estSleep) : '',
         r.estWake !== undefined ? isoLocal(r.estWake) : '',
         r.valid ? Math.round(r.dur) : '',
-        r.flags.concat(r.warn ? [r.warn] : []).join('; ')
+        r.flags.concat(r.warn ? [r.warn] : []).join('; '),
+        e.type
       ]);
     });
     var text = rows.map(function (r) { return r.map(csvCell).join(','); }).join('\r\n') + '\r\n';
@@ -987,14 +1021,16 @@
     var rows = parseCsv(text);
     if (!rows.length) { toast('That file is empty.', 'error'); return; }
     var head = rows[0].map(function (h) { return h.trim().toLowerCase(); });
-    var iBed = head.indexOf('bed_press'), iWake = head.indexOf('wake_press');
+    var iBed = head.indexOf('bed_press'), iWake = head.indexOf('wake_press'), iType = head.indexOf('type');
     if (iBed < 0 || iWake < 0) { toast('Could not find "bed_press" and "wake_press" columns. Use a file made by Export CSV.', 'error'); return; }
     var byNight = {}, skipped = 0;
     rows.slice(1).forEach(function (r) {
       var b = (r[iBed] || '').trim(), w = (r[iWake] || '').trim();
       var bed = b ? new Date(b).getTime() : null, wake = w ? new Date(w).getTime() : null;
       if ((bed === null && wake === null) || Number.isNaN(bed) || Number.isNaN(wake)) { skipped++; return; }
-      var e = { id: newId(), bed: bed, wake: wake };
+      var type = iType >= 0 ? (r[iType] || '').trim().toLowerCase() : '';
+      if (type !== TYPE_MANUAL && type !== TYPE_BUTTON) type = inferType(bed, wake); // older exports have no type column
+      var e = { id: newId(), type: type, bed: bed, wake: wake };
       byNight[nightKey(e)] = e; // if the file repeats a night, the later row wins
     });
     var list = Object.keys(byNight).map(function (k) { return byNight[k]; });
