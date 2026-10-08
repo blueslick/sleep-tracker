@@ -88,7 +88,6 @@
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 18px; margin-top: 16px; }
 
   /* Big buttons */
-  .press { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   .big {
     min-height: 150px; border: 0; border-radius: 24px; font-size: 1.75rem; font-weight: 700;
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
@@ -98,8 +97,7 @@
   .big:active { transform: scale(.97); }
   .big .icon { font-size: 2.4rem; line-height: 1; }
   .big small { font-size: .95rem; font-weight: 500; opacity: .85; }
-  #btnBed { background: var(--bed); color: var(--bed-text); }
-  #btnWake { background: var(--wake); color: var(--wake-text); }
+  #logBtn { width: 100%; background: var(--bed); color: var(--bed-text); }
   .status { margin: 14px 4px 0; text-align: center; min-height: 1.4em; }
 
   .toast {
@@ -204,7 +202,6 @@
   .error { color: var(--danger); min-height: 1.3em; margin: 10px 0 0; }
   .warnmsg { color: var(--warn); margin: 10px 0 0; }
   .warnmsg:empty { display: none; }
-  .logrow { display: flex; justify-content: center; margin-top: 4px; }
 
   /* View switch */
   .viewseg { display: flex; margin-top: 16px; }
@@ -227,8 +224,6 @@
   .day .dur { font-size: .86rem; font-weight: 700; padding-bottom: 6px; }
   .day .dur.note { font-size: .7rem; font-weight: 600; }
   .day .warn { position: absolute; top: 3px; right: 4px; font-size: .85rem; line-height: 1; }
-  .day .mtag { font-size: .62rem; font-weight: 600; opacity: .85; padding-bottom: 4px; }
-  .day.man .dur { padding-bottom: 0; }
   .day.today { border-color: var(--info); box-shadow: 0 0 0 2px var(--info); }
   .day.today .dn { text-decoration: underline; }
   .day.c-g { background: var(--c-g-bg); color: var(--c-g-fg); }
@@ -251,9 +246,7 @@
     .day .dur.note { font-size: .56rem; white-space: normal; }
     .day .dn { font-size: .72rem; }
     .day .warn { font-size: .7rem; top: 2px; right: 2px; }
-    .day .mtag { font-size: .54rem; padding-bottom: 3px; }
     .calgrid { gap: 4px; }
-    .press { grid-template-columns: 1fr; }
     .big { min-height: 120px; }
     .tiles { grid-template-columns: 1fr; }
     .hgrid { grid-template-columns: 1fr 1fr; }
@@ -275,12 +268,10 @@
     Use "Export CSV" below to keep a copy.
   </div>
 
-  <section class="press" aria-label="Record sleep">
-    <button id="btnBed" class="big" type="button"><span class="icon">🌙</span>Going to bed<small>Press when you lie down</small></button>
-    <button id="btnWake" class="big" type="button"><span class="icon">☀️</span>Just woke up<small>Press when you wake</small></button>
+  <section aria-label="Log sleep">
+    <button id="logBtn" class="big" type="button"><span class="icon">✍️</span>Log sleep<small>Enter when you fell asleep and woke up</small></button>
   </section>
   <p id="status" class="status muted"></p>
-  <div class="logrow"><button id="logBtn" type="button">✍️ Log manually</button></div>
 
   <div class="seg viewseg" id="viewSeg" role="group" aria-label="Choose view">
     <button type="button" data-view="main">📊 Overview</button>
@@ -303,7 +294,6 @@
         <span><i class="sw-r"></i>Under 6h</span>
         <span><i class="sw-n"></i>No data</span>
         <span>⚠ Incomplete or needs checking</span>
-        <span><em>manual</em> = actual times you entered</span>
       </div>
       <p class="muted small">Each day shows the night that <em>starts</em> that evening. Tap a day to see details, edit, or add a night you forgot to log.</p>
     </section>
@@ -329,7 +319,7 @@
   <section class="card" aria-label="History">
     <div class="toolbar">
       <h2 style="margin:0">History</h2>
-      <button type="button" id="addBtn" class="primary">+ Add a night</button>
+      <button type="button" id="addBtn" class="primary">+ Log a night</button>
     </div>
     <div id="history"></div>
   </section>
@@ -338,14 +328,6 @@
     <h2>Settings</h2>
     <div class="settings">
       <div>
-        <label for="setSleep">Minutes to fall asleep</label>
-        <input id="setSleep" type="number" min="0" max="600" step="1" inputmode="numeric">
-      </div>
-      <div>
-        <label for="setWake">Minutes awake before pressing</label>
-        <input id="setWake" type="number" min="0" max="600" step="1" inputmode="numeric">
-      </div>
-      <div>
         <label for="setWeekend">Weekend nights</label>
         <select id="setWeekend">
           <option value="friSat">Friday &amp; Saturday</option>
@@ -353,8 +335,6 @@
         </select>
       </div>
     </div>
-    <p class="muted small" id="settingsNote"></p>
-    <p class="muted small">Changing these recalculates everything instantly. Your saved button-press times are never altered. Nights you log manually use your actual times, so these settings never apply to them.</p>
   </section>
 
   <section class="card" aria-label="Backup">
@@ -366,8 +346,7 @@
     </div>
     <p class="muted small">
       Your data lives only in this browser, on this computer. Export a CSV now and then, and keep this HTML file
-      in the same place so your browser finds your data again. The CSV holds your raw press times (or the actual
-      times, for nights you logged manually) and each night's type; the two offsets above are settings and are not stored in it.
+      in the same place so your browser finds your data again. The CSV holds the exact times you logged for each night.
     </p>
   </section>
   </div><!-- /viewMain -->
@@ -382,39 +361,13 @@
     <button type="button" id="dayDelete" class="danger">Delete</button>
     <span class="spacer"></span>
     <button type="button" id="dayClose">Close</button>
-    <button type="button" id="dayManual">Log manually</button>
     <button type="button" id="dayEdit" class="primary"></button>
   </div>
 </dialog>
 
-<dialog id="editDlg">
-  <form id="editForm" novalidate>
-    <h2 id="editTitle">Edit night</h2>
-    <label for="edBed">Went to bed</label>
-    <div class="inrow">
-      <input type="datetime-local" id="edBed">
-      <button type="button" class="ghost" data-clear="edBed">Clear</button>
-    </div>
-    <label for="edWake">Woke up</label>
-    <div class="inrow">
-      <input type="datetime-local" id="edWake">
-      <button type="button" class="ghost" data-clear="edWake">Clear</button>
-    </div>
-    <p id="edPreview" class="muted small"></p>
-    <p id="edError" class="error" role="alert"></p>
-    <div class="dlgBtns">
-      <button type="button" id="edDelete" class="danger">Delete</button>
-      <button type="button" id="edManual">Switch to manual times</button>
-      <span class="spacer"></span>
-      <button type="button" id="edCancel">Cancel</button>
-      <button type="submit" class="primary">Save</button>
-    </div>
-  </form>
-</dialog>
-
 <dialog id="manualDlg">
   <form id="manualForm" novalidate>
-    <h2 id="mnTitle">Log sleep manually</h2>
+    <h2 id="mnTitle">Log sleep</h2>
     <p id="mnIntro" class="muted small"></p>
     <label for="mnDate">Night of (the evening you went to bed)</label>
     <input type="date" id="mnDate">
@@ -457,7 +410,7 @@
   var WD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   var MANUAL_MIN_WARN = 2 * 60, MANUAL_MAX_WARN = 14 * 60; // minutes; outside this range a manual night gets a "check times" warning
-  var DEFAULTS = { sleepOffset: 30, wakeOffset: 18, weekend: 'friSat', range: '30', theme: '', view: 'main' };
+  var DEFAULTS = { weekend: 'friSat', range: '30', theme: '', view: 'main' };
 
   var memory = {};
   function readStore(key, fallback) {
@@ -480,31 +433,18 @@
 
   function num(v) { return typeof v === 'number' && isFinite(v) ? v : null; }
 
-  // Every entry has a type. 'button' = made by the Going to bed / Just woke up buttons: the stored times are
-  // raw presses and the offsets apply. 'manual' = typed in by hand: the stored times are exactly what the user
-  // recorded and no offset is ever applied. See countedTimes().
-  var TYPE_MANUAL = 'manual', TYPE_BUTTON = 'button';
-  function isExactMinute(ts) { return ts === null || ts % MIN === 0; }
-  // For entries saved before types existed. The edit form only holds whole minutes, so a manual time sits on an
-  // exact minute (:00.000), while a button press (Date.now()) almost never does.
-  function inferType(bed, wake) {
-    return isExactMinute(bed) && isExactMinute(wake) ? TYPE_MANUAL : TYPE_BUTTON;
-  }
-  var migratedTypes = false;
+  // An entry is one night: the time fell asleep (bed) and the time woke up (wake), both exactly as logged.
+  // Either can be null for older, incomplete entries. Nothing is ever added to or subtracted from them.
   var entries = (function () {
     var raw = readStore(KEY_ENTRIES, []);
     if (!Array.isArray(raw)) return [];
     return raw.map(function (x) {
-      if (!x) return null;
-      var bed = num(x.bed), wake = num(x.wake), type = x.type;
-      if (type !== TYPE_MANUAL && type !== TYPE_BUTTON) { type = inferType(bed, wake); migratedTypes = true; }
-      return { id: String(x.id || newId()), type: type, bed: bed, wake: wake };
+      return x && { id: String(x.id || newId()), bed: num(x.bed), wake: num(x.wake) };
     }).filter(function (x) { return x && (x.bed !== null || x.wake !== null); });
   })();
   var settings = (function () {
     var s = Object.assign({}, DEFAULTS, readStore(KEY_SETTINGS, {}));
-    if (num(s.sleepOffset) === null) s.sleepOffset = DEFAULTS.sleepOffset;
-    if (num(s.wakeOffset) === null) s.wakeOffset = DEFAULTS.wakeOffset;
+    delete s.sleepOffset; delete s.wakeOffset; // offsets no longer exist
     if (s.weekend !== 'satSun') s.weekend = 'friSat';
     if (['7', '30', 'all'].indexOf(s.range) < 0) s.range = DEFAULTS.range;
     if (s.view !== 'cal') s.view = 'main';
@@ -513,18 +453,17 @@
   function persistEntries() { writeStore(KEY_ENTRIES, entries); }
   function persistSettings() { writeStore(KEY_SETTINGS, settings); }
   function newId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
-  if (migratedTypes) persistEntries();
 
   /* ---------- date & format helpers ---------- */
   function pad(n) { return String(n).padStart(2, '0'); }
   function dateKey(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
 
-  // The night a bed press belongs to: before noon counts as the previous calendar date.
+  // The night a bed time belongs to: before noon counts as the previous calendar date.
   function nightOfBed(ts) {
     var d = new Date(ts);
     return new Date(d.getFullYear(), d.getMonth(), d.getDate() - (d.getHours() < 12 ? 1 : 0));
   }
-  // A wake press with no bed press belongs to the night before the wake date.
+  // A wake time with no bed time belongs to the night before the wake date.
   function nightOfWake(ts) {
     var d = new Date(ts);
     return new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1);
@@ -558,61 +497,25 @@
       pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds()) + '.' +
       String(d.getMilliseconds()).padStart(3, '0') + (off >= 0 ? '+' : '-') + pad(Math.floor(a / 60)) + ':' + pad(a % 60);
   }
-  function toInput(ts) {
-    if (ts === null) return '';
-    var d = new Date(ts);
-    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
-  }
-  // Keep the exact original timestamp if the user did not change the field (inputs only hold minutes).
-  function fromInput(str, original) {
-    if (!str) return null;
-    if (original !== null && original !== undefined && toInput(original) === str) return original;
-    var t = new Date(str).getTime();
-    return isFinite(t) ? t : NaN;
-  }
-
   /* ---------- calculations ---------- */
   function isWeekend(nightDate) {
     var d = nightDate.getDay();
     return settings.weekend === 'satSun' ? (d === 6 || d === 0) : (d === 5 || d === 6);
   }
 
-  // THE one place offsets are applied. Every view (status, chart, stats, history, calendar, day details, edit
-  // preview, toasts, CSV export) gets its estimated times from here, via analyze(). Only 'button' entries are
-  // shifted; 'manual' entries are returned exactly as recorded.
-  function countedTimes(e) {
-    var out = { estSleep: undefined, estWake: undefined };
-    var offsets = e.type === TYPE_BUTTON;
-    if (e.bed !== null) out.estSleep = e.bed + (offsets ? settings.sleepOffset * MIN : 0);
-    if (e.wake !== null) out.estWake = e.wake - (offsets ? settings.wakeOffset * MIN : 0);
-    return out;
-  }
-
-  // Works out estimates and problems for one entry. Only `valid` entries feed chart bars and stats.
+  // Works out the duration and problems for one entry. Only `valid` entries feed chart bars and stats.
   function analyze(e) {
-    var r = { e: e, night: nightOf(e), flags: [], valid: false, inProgress: false };
-    var now = Date.now();
+    var r = { e: e, night: nightOf(e), flags: [], valid: false };
     r.weekend = isWeekend(r.night);
-    var t = countedTimes(e);
-    r.estSleep = t.estSleep; r.estWake = t.estWake;
-    r.manual = e.type === TYPE_MANUAL;
-
     if (e.bed === null) r.flags.push('Missing bed time');
-    else if (e.wake === null) {
-      if (e.bed <= now && now - e.bed <= DAY) r.inProgress = true;
-      else r.flags.push('Missing wake time');
-    }
+    else if (e.wake === null) r.flags.push('Missing wake time');
     if (e.bed !== null && e.wake !== null) {
       if (e.wake <= e.bed) r.flags.push('Wake is before bed');
-      else if (r.estWake <= r.estSleep) r.flags.push('Offsets leave no sleep');
       else {
         r.valid = true;
-        r.dur = (r.estWake - r.estSleep) / MIN;
-        if (r.manual) {
-          if (r.dur > MANUAL_MAX_WARN) r.warn = 'Over 14 hours, check times';
-          else if (r.dur < MANUAL_MIN_WARN) r.warn = 'Under 2 hours, check times';
-        } else if (r.dur > 16 * 60) r.warn = 'Unusually long, check times';
-        else if (r.dur < 60) r.warn = 'Very short, check times';
+        r.dur = (e.wake - e.bed) / MIN;
+        if (r.dur > MANUAL_MAX_WARN) r.warn = 'Over 14 hours, check times';
+        else if (r.dur < MANUAL_MIN_WARN) r.warn = 'Under 2 hours, check times';
       }
     }
     return r;
@@ -626,8 +529,8 @@
   function summarize(list) {
     if (!list.length) return null;
     var dur = meanSd(list.map(function (r) { return r.dur; }));
-    var bed = meanSd(list.map(function (r) { return shifted(r.estSleep, 720); }));   // noon-to-noon
-    var wake = meanSd(list.map(function (r) { return shifted(r.estWake, 1080); }));  // 6pm-to-6pm
+    var bed = meanSd(list.map(function (r) { return shifted(r.e.bed, 720); }));   // noon-to-noon
+    var wake = meanSd(list.map(function (r) { return shifted(r.e.wake, 1080); }));  // 6pm-to-6pm
     return {
       n: list.length, dur: dur.mean,
       bed: (bed.mean + 720) % 1440, bedSd: bed.sd,
@@ -655,75 +558,13 @@
     toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, 8000);
   }
 
-  /* ---------- button presses ---------- */
+  /* ---------- helpers ---------- */
   function findByNight(key, exceptId) {
     return entries.find(function (e) { return e.id !== exceptId && nightKey(e) === key; });
   }
 
-  function describeManual(e) {
+  function describeNight(e) {
     return 'asleep ' + (e.bed !== null ? fmtTime(e.bed) : 'unknown') + ', awake ' + (e.wake !== null ? fmtTime(e.wake) : 'unknown');
-  }
-
-  function pressBed() {
-    var now = Date.now();
-    var key = dateKey(nightOfBed(now));
-    var ex = findByNight(key);
-    if (ex && ex.type === 'manual') {
-      if (!confirm('The night of ' + fmtDay(nightOf(ex)) + ' was logged manually (' + describeManual(ex) + ').\n\nReplace it with a new entry that starts at ' + fmtTime(now) + '?')) return;
-      entries = entries.filter(function (e) { return e !== ex; });
-      entries.push({ id: newId(), bed: now, wake: null, type: 'button' });
-    } else if (ex) {
-      if (ex.bed !== null && !confirm('You already have a bed time of ' + fmtTime(ex.bed) + ' for the night of ' +
-          fmtDay(nightOf(ex)) + '.\n\nReplace it with ' + fmtTime(now) + '?')) return;
-      ex.bed = now;
-    } else {
-      var stale = entries.filter(function (e) { return e.bed !== null && e.wake === null; });
-      entries.push({ id: newId(), type: TYPE_BUTTON, bed: now, wake: null });
-      if (stale.length) {
-        persistEntries(); render();
-        toast('Saved bed time ' + fmtTime(now, true) + '. Heads-up: an earlier night has no wake time. Look for the ⚠ in History.', 'warn');
-        return;
-      }
-    }
-    persistEntries(); render();
-    toast('Saved: went to bed at ' + fmtTime(now, true) + '. Counted as asleep from ' + fmtTime(countedTimes({ type: TYPE_BUTTON, bed: now, wake: null }).estSleep) + '. Sleep well!');
-  }
-
-  function pressWake() {
-    var now = Date.now();
-    var open = entries.filter(function (e) {
-      return e.bed !== null && e.wake === null && e.bed <= now && now - e.bed <= DAY;
-    }).sort(function (a, b) { return b.bed - a.bed; })[0];
-
-    if (open) {
-      open.wake = now;
-      persistEntries(); render();
-      var r = analyze(open);
-      toast('Saved: woke up at ' + fmtTime(now, true) + (r.valid ? '. Slept about ' + fmtDur(r.dur) + '.' : '. Check this night in History.'), r.valid ? '' : 'warn');
-      return;
-    }
-    var ex = findByNight(dateKey(nightOfWake(now)));
-    if (ex && ex.type === 'manual') {
-      if (!confirm('The night of ' + fmtDay(nightOf(ex)) + ' was logged manually (' + describeManual(ex) + ').\n\nReplace it with a wake press at ' + fmtTime(now) + '? The manual times would be lost.')) return;
-      entries = entries.filter(function (e) { return e !== ex; });
-      entries.push({ id: newId(), bed: null, wake: now, type: 'button' });
-      persistEntries(); render();
-      toast('Saved wake time ' + fmtTime(now, true) + ', but there was no "Going to bed" press. ' +
-        'It is flagged ⚠ in History: tap Edit to add the bed time.', 'warn');
-      return;
-    }
-    if (ex) {
-      if (ex.wake !== null && !confirm('You already have a wake time of ' + fmtTime(ex.wake) + ' for the night of ' +
-          fmtDay(nightOf(ex)) + '.\n\nReplace it with ' + fmtTime(now) + '?')) return;
-      ex.wake = now;
-      persistEntries(); render();
-      toast('Saved wake time ' + fmtTime(now, true) + '.');
-      return;
-    }
-    entries.push({ id: newId(), type: TYPE_BUTTON, bed: null, wake: now });
-    persistEntries(); render();
-    toast('Saved wake time ' + fmtTime(now, true) + ', but there was no "Going to bed" press. ' +
-      'It is flagged ⚠ in History: tap Edit to add the bed time.', 'warn');
   }
 
   /* ---------- rendering ---------- */
@@ -731,13 +572,10 @@
     var el = document.getElementById('status');
     var list = sortedEntries().map(analyze);
     var last = list[list.length - 1];
-    if (!last) { el.textContent = 'No nights recorded yet. Press a button to start.'; return; }
-    if (last.inProgress) {
-      var ago = Math.floor((Date.now() - last.e.bed) / MIN);
-      el.textContent = 'Sleeping since ' + fmtTime(last.e.bed) + ' (' + fmtDur(ago) + ' ago). Press "Just woke up" when you are up.';
-    } else if (last.valid) {
-      el.textContent = 'Latest night (' + fmtDay(last.night) + '): about ' + fmtDur(last.dur) +
-        ', ' + fmtTime(last.estSleep) + ' to ' + fmtTime(last.estWake) + '.';
+    if (!last) { el.textContent = 'No nights logged yet. Tap "Log sleep" to add one.'; return; }
+    if (last.valid) {
+      el.textContent = 'Latest night (' + fmtDay(last.night) + '): ' + fmtDur(last.dur) +
+        ', ' + fmtTime(last.e.bed) + ' to ' + fmtTime(last.e.wake) + '.';
     } else {
       el.textContent = 'Latest entry (' + fmtDay(last.night) + ') needs attention: ' + last.flags.join(', ').toLowerCase() + '.';
     }
@@ -758,20 +596,20 @@
       var x = function (ts) { return (ts - anchor) / SPAN * 100; };
       html += '<div class="crow"><div class="clabel">' + fmtDayShort(r.night) + '</div><div class="ctrack">';
       if (r.valid) {
-        var a = x(r.estSleep), b = x(r.estWake);
+        var a = x(r.e.bed), b = x(r.e.wake);
         var cl = a < 0, cr = b > 100;
         a = Math.max(0, Math.min(100, a)); b = Math.max(0, Math.min(100, b));
         var w = Math.max(b - a, 0.8);
-        var tip = fmtDay(r.night) + ': ' + fmtTime(r.estSleep) + ' to ' + fmtTime(r.estWake) + ' (' + fmtDur(r.dur) + ')';
+        var tip = fmtDay(r.night) + ': ' + fmtTime(r.e.bed) + ' to ' + fmtTime(r.e.wake) + ' (' + fmtDur(r.dur) + ')';
         html += '<button type="button" class="bar' + (r.weekend ? ' we' : '') + (cl ? ' cl' : '') + (cr ? ' cr' : '') +
           '" data-edit="' + r.e.id + '" style="left:' + a + '%;width:' + w + '%" title="' + tip + '" aria-label="' + tip + '">' +
           (w > 14 ? fmtDur(r.dur) : '') + '</button>';
       } else {
-        [['bed', 'Bed'], ['wake', 'Wake']].forEach(function (p) {
+        [['bed', 'Fell asleep'], ['wake', 'Woke up']].forEach(function (p) {
           var ts = r.e[p[0]];
           if (ts === null) return;
           var pos = Math.max(0, Math.min(100, x(ts)));
-          var tip = p[1] + ' press ' + fmtTime(ts) + ' (' + (r.flags.concat(r.inProgress ? ['In progress'] : [])).join(', ') + ')';
+          var tip = p[1] + ' ' + fmtTime(ts) + ' (' + r.flags.join(', ') + ')';
           html += '<button type="button" class="dot" data-edit="' + r.e.id + '" style="left:' + pos + '%" title="' + tip + '" aria-label="' + tip + '"></button>';
         });
       }
@@ -780,8 +618,8 @@
     html += '</div><div class="legend">' +
       '<span><i style="background:var(--bar)"></i>Weekday night</span>' +
       '<span><i style="background:var(--bar-we)"></i>Weekend night</span>' +
-      '<span><i class="dotl"></i>Incomplete night (raw press shown)</span>' +
-      '<span>Bars show estimated sleep. Tap one to edit.</span></div>';
+      '<span><i class="dotl"></i>Incomplete night (only one time logged)</span>' +
+      '<span>Tap a bar to edit.</span></div>';
     host.innerHTML = html;
     var sc = document.getElementById('chartScroll');
     sc.scrollTop = sc.scrollHeight;
@@ -794,7 +632,7 @@
     var valid = sortedEntries().filter(inRange).map(analyze).filter(function (r) { return r.valid; });
     var all = summarize(valid);
     if (!all) {
-      host.innerHTML = '<p class="muted">Statistics appear once you have a complete night (bed and wake) in this period.</p>';
+      host.innerHTML = '<p class="muted">Statistics appear once you have a complete night (fell asleep and woke up) in this period.</p>';
       return;
     }
     var html = '<div class="tiles">' +
@@ -812,30 +650,23 @@
     html += '<h3>Weekday vs weekend</h3><div class="tablewrap"><table class="cmp"><thead><tr><th></th><th>Nights</th><th>Avg sleep</th><th>Avg bedtime</th><th>Avg wake</th></tr></thead><tbody>' +
       row('Weekday nights', wd) + row('Weekend nights (' + wkLabel + ')', we) + '</tbody></table></div>' +
       '<p class="muted small">"Varies ±" is the standard deviation: roughly how many minutes your times typically drift from the average. ' +
-      'Only complete nights are counted. Times use your estimated sleep and wake times.</p>';
+      'Only complete nights are counted.</p>';
     host.innerHTML = html;
   }
 
   function renderHistory() {
     var host = document.getElementById('history');
     var list = sortedEntries().map(analyze).reverse();
-    if (!list.length) { host.innerHTML = '<p class="muted">No entries yet. Press a button above, or add a night manually.</p>'; return; }
+    if (!list.length) { host.innerHTML = '<p class="muted">No entries yet. Tap "Log sleep" above to add a night.</p>'; return; }
     host.innerHTML = list.map(function (r) {
       var pills = r.flags.map(function (f) { return '<span class="pill">⚠ ' + f + '</span>'; });
       if (r.warn) pills.push('<span class="pill">⚠ ' + r.warn + '</span>');
-      if (r.inProgress) pills.push('<span class="pill info">In progress</span>');
-      if (r.manual) pills.push('<span class="pill info">manual</span>');
-      var counted = function (txt) { return r.manual ? '' : '<span class="e">counted ' + txt + '</span>'; };
-      var bed = r.e.bed !== null
-        ? '<span class="v" title="' + isoLocal(r.e.bed) + '">' + fmtTime(r.e.bed) + '</span>' + counted(fmtTime(r.estSleep))
-        : '<span class="v muted">none</span>';
-      var wake = r.e.wake !== null
-        ? '<span class="v" title="' + isoLocal(r.e.wake) + '">' + fmtTime(r.e.wake) + '</span>' + counted(fmtTime(r.estWake))
-        : '<span class="v muted">none</span>';
+      var bed = r.e.bed !== null ? '<span class="v">' + fmtTime(r.e.bed) + '</span>' : '<span class="v muted">none</span>';
+      var wake = r.e.wake !== null ? '<span class="v">' + fmtTime(r.e.wake) + '</span>' : '<span class="v muted">none</span>';
       return '<article class="hrow' + (r.flags.length ? ' flagged' : '') + '">' +
         '<div class="hhead"><strong>' + fmtDay(r.night) + '</strong><div class="pills">' + pills.join('') + '</div></div>' +
-        '<div class="hgrid"><div><span class="k">' + (r.manual ? 'Fell asleep' : 'Pressed: bed') + '</span>' + bed + '</div>' +
-        '<div><span class="k">' + (r.manual ? 'Woke up' : 'Pressed: wake') + '</span>' + wake + '</div>' +
+        '<div class="hgrid"><div><span class="k">Fell asleep</span>' + bed + '</div>' +
+        '<div><span class="k">Woke up</span>' + wake + '</div>' +
         '<div><span class="k">Sleep</span><span class="v">' + (r.valid ? fmtDur(r.dur) : '–') + '</span></div></div>' +
         (r.flags.length ? '<p class="hnote">Not counted in the chart or stats until fixed.</p>' : '') +
         '<div class="acts"><button type="button" data-edit="' + r.e.id + '">Edit</button>' +
@@ -848,15 +679,11 @@
       b.setAttribute('aria-pressed', String(b.dataset.range === settings.range));
     });
   }
-  function renderSettingsNote() {
-    document.getElementById('settingsNote').textContent =
-      'Button presses: counted as asleep = bed press + ' + settings.sleepOffset + ' min, counted as awake = wake press − ' + settings.wakeOffset + ' min. Nights you add by hand use exactly the times you enter.';
-  }
   /* ---------- calendar ---------- */
   var cal = (function () { var d = new Date(); return { y: d.getFullYear(), m: d.getMonth() }; })();
   var MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
-  // Colour band by estimated sleep, using whole minutes so the label and the colour always agree.
+  // Colour band by sleep duration, using whole minutes so the label and the colour always agree.
   function sleepBand(mins) {
     var m = Math.round(mins);
     return m >= 480 ? 'g' : m >= 420 ? 'y' : m >= 360 ? 'o' : 'r';
@@ -884,19 +711,13 @@
         body = '<span class="dur">' + fmtDur(r.dur) + '</span>';
         label += fmtDur(r.dur) + ' of sleep';
       } else if (r) {
-        var note = r.inProgress ? 'Sleeping…'
-          : r.flags[0] === 'Missing wake time' ? 'Bed only'
+        var note = r.flags[0] === 'Missing wake time' ? 'Bed only'
           : r.flags[0] === 'Missing bed time' ? 'Wake only' : 'Check';
         body = '<span class="dur note">' + note + '</span>';
         label += note.toLowerCase();
       } else {
         body = '<span class="dur"></span>';
         label += 'no data';
-      }
-      if (r && r.manual) {
-        cls += ' man';
-        body += '<span class="mtag">manual</span>';
-        label += ' (logged manually)';
       }
       if (r && (r.flags.length || r.warn)) {
         warn = '<span class="warn" aria-hidden="true">⚠</span>';
@@ -917,27 +738,18 @@
     var e = entries.find(function (x) { return nightKey(x) === key; });
     document.getElementById('dayTitle').textContent = 'Night of ' + fmtDay(date);
     var body = document.getElementById('dayBody');
-    document.getElementById('dayManual').hidden = !!e;
     if (!e) {
       body.innerHTML = '<p class="muted">Nothing logged for this night.</p>';
       document.getElementById('dayEdit').textContent = '+ Add entry';
       document.getElementById('dayDelete').hidden = true;
     } else {
       var r = analyze(e);
-      var rows = r.manual ? [
+      var rows = [
         ['Fell asleep', e.bed !== null ? stamp(e.bed) : 'none'],
         ['Woke up', e.wake !== null ? stamp(e.wake) : 'none'],
         ['Sleep', r.valid ? fmtDur(r.dur) : '–']
-      ] : [
-        ['Pressed: went to bed', e.bed !== null ? stamp(e.bed) : 'none'],
-        ['Pressed: woke up', e.wake !== null ? stamp(e.wake) : 'none'],
-        ['Counted as asleep', r.estSleep !== undefined ? fmtTime(r.estSleep) : '–'],
-        ['Counted as awake', r.estWake !== undefined ? fmtTime(r.estWake) : '–'],
-        ['Estimated sleep', r.valid ? fmtDur(r.dur) : '–']
       ];
       var pills = r.flags.concat(r.warn ? [r.warn] : []).map(function (f) { return '<span class="pill">⚠ ' + f + '</span>'; });
-      if (r.inProgress) pills.push('<span class="pill info">In progress</span>');
-      if (r.manual) pills.push('<span class="pill info">manual</span>');
       body.innerHTML = (pills.length ? '<div class="pills">' + pills.join('') + '</div>' : '') +
         '<dl class="dayrows">' + rows.map(function (x) { return '<div><dt>' + x[0] + '</dt><dd>' + x[1] + '</dd></div>'; }).join('') + '</dl>' +
         (r.flags.length ? '<p class="hnote">Not counted in the chart or stats until fixed.</p>' : '');
@@ -957,82 +769,15 @@
   }
 
   function render() {
-    renderView(); renderRange(); renderStatus(); renderChart(); renderStats(); renderHistory(); renderSettingsNote(); renderCalendar();
+    renderView(); renderRange(); renderStatus(); renderChart(); renderStats(); renderHistory(); renderCalendar();
   }
-
-  /* ---------- edit dialog ---------- */
-  var editDlg = document.getElementById('editDlg');
-  var edBed = document.getElementById('edBed'), edWake = document.getElementById('edWake');
-  var edError = document.getElementById('edError'), edPreview = document.getElementById('edPreview');
-  var editing = null; // entry being edited, or null when adding
-
-  // `night` (a local-midnight Date) pre-fills a new entry for that night; default is last night.
-  function openEdit(id, night) {
-    editing = id ? entries.find(function (e) { return e.id === id; }) || null : null;
-    if (editing && editing.type === 'manual') { openManual(editing); return; }
-    document.getElementById('edManual').hidden = !editing;
-    document.getElementById('editTitle').textContent = editing ? 'Edit night' : 'Add a night';
-    document.getElementById('edDelete').hidden = !editing;
-    if (editing) {
-      edBed.value = toInput(editing.bed); edWake.value = toInput(editing.wake);
-    } else {
-      var d = night || new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate() - 1);
-      var bed = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 0).getTime();
-      var wake = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1, 7, 0).getTime();
-      edBed.value = toInput(bed); edWake.value = toInput(wake);
-    }
-    edError.textContent = '';
-    updatePreview();
-    editDlg.showModal();
-  }
-  function readForm() {
-    var orig = editing || { bed: null, wake: null };
-    return { bed: fromInput(edBed.value, orig.bed), wake: fromInput(edWake.value, orig.wake) };
-  }
-  function updatePreview() {
-    var f = readForm();
-    if (Number.isNaN(f.bed) || Number.isNaN(f.wake) || (f.bed === null && f.wake === null)) { edPreview.textContent = ''; return; }
-    var r = analyze({ id: 'x', type: editing ? editing.type : TYPE_MANUAL, bed: f.bed, wake: f.wake });
-    edPreview.textContent = 'Night of ' + fmtDay(r.night) + (r.valid
-      ? ': counted ' + fmtTime(r.estSleep) + ' to ' + fmtTime(r.estWake) + ' (' + fmtDur(r.dur) + ').'
-      : '. This will be flagged: ' + (r.flags.join(', ').toLowerCase() || 'in progress') + '.');
-  }
-  edBed.addEventListener('input', updatePreview);
-  edWake.addEventListener('input', updatePreview);
-  editDlg.addEventListener('click', function (ev) {
-    var c = ev.target.getAttribute && ev.target.getAttribute('data-clear');
-    if (c) { document.getElementById(c).value = ''; updatePreview(); }
-  });
-  document.getElementById('edCancel').addEventListener('click', function () { editDlg.close(); });
-  document.getElementById('edDelete').addEventListener('click', function () {
-    if (editing && confirm('Delete the night of ' + fmtDay(nightOf(editing)) + '?')) { removeEntry(editing.id); editDlg.close(); }
-  });
-  document.getElementById('editForm').addEventListener('submit', function (ev) {
-    ev.preventDefault();
-    var f = readForm();
-    if (Number.isNaN(f.bed) || Number.isNaN(f.wake)) { edError.textContent = 'One of the dates is not valid.'; return; }
-    if (f.bed === null && f.wake === null) { edError.textContent = 'Enter at least a bed time or a wake time.'; return; }
-    if (f.bed !== null && f.wake !== null && f.wake <= f.bed) { edError.textContent = 'Wake time must be after the bed time.'; return; }
-    var id = editing ? editing.id : null;
-    var clash = findByNight(nightKey({ bed: f.bed, wake: f.wake }), id);
-    if (clash) {
-      edError.textContent = 'There is already an entry for the night of ' + fmtDay(nightOf(clash)) + ' (one sleep per night). Edit or delete that one instead.';
-      return;
-    }
-    // Hand-typed times from "+ Add a night" are exact (manual). Editing keeps the entry's type; use
-    // "Switch to manual times" to turn a button entry into a manual one.
-    if (editing) { editing.bed = f.bed; editing.wake = f.wake; }
-    else entries.push({ id: newId(), type: TYPE_MANUAL, bed: f.bed, wake: f.wake });
-    persistEntries(); render(); editDlg.close();
-    toast('Saved.');
-  });
 
   /* ---------- manual log dialog ---------- */
   var manualDlg = document.getElementById('manualDlg');
   var mnDate = document.getElementById('mnDate'), mnSleep = document.getElementById('mnSleep'), mnWake = document.getElementById('mnWake');
   var mnPreview = document.getElementById('mnPreview'), mnWarn = document.getElementById('mnWarn'), mnError = document.getElementById('mnError');
   var mnSave = document.getElementById('mnSave');
-  var mnEditing = null; // entry being edited or switched to manual, or null when adding
+  var mnEditing = null; // entry being edited, or null when adding
 
   function toDateInput(d) { return dateKey(d); }
   function toTimeInput(ts) {
@@ -1041,29 +786,20 @@
     return pad(d.getHours()) + ':' + pad(d.getMinutes());
   }
 
-  // `entry` edits (or switches) an existing night; `night` (a local-midnight Date) pre-fills a new one. Default is last night.
+  // `entry` edits an existing night; `night` (a local-midnight Date) pre-fills a new one. Default is last night.
   function openManual(entry, night) {
     mnEditing = entry || null;
-    var d, s = '', w = '', intro;
+    var d, s = '', w = '';
     if (entry) {
-      var r = analyze(entry);
-      d = r.night;
-      s = toTimeInput(r.estSleep); w = toTimeInput(r.estWake);
-      if (r.manual) {
-        document.getElementById('mnTitle').textContent = 'Edit manual night';
-        intro = 'Enter the times you actually fell asleep and woke up.';
-      } else {
-        document.getElementById('mnTitle').textContent = 'Switch to manual times';
-        intro = 'Pre-filled with the times currently counted as asleep and awake. Adjust them to your actual times. ' +
-          'Saving replaces the button-press times for this night, and the offsets will no longer apply to it.';
-      }
+      d = nightOf(entry);
+      s = toTimeInput(entry.bed); w = toTimeInput(entry.wake);
+      document.getElementById('mnTitle').textContent = 'Edit night';
     } else {
       var t = new Date();
       d = night || new Date(t.getFullYear(), t.getMonth(), t.getDate() - 1);
-      document.getElementById('mnTitle').textContent = 'Log sleep manually';
-      intro = 'Enter the times you actually fell asleep and woke up. Your offset settings are not applied to manual entries.';
+      document.getElementById('mnTitle').textContent = 'Log sleep';
     }
-    document.getElementById('mnIntro').textContent = intro;
+    document.getElementById('mnIntro').textContent = 'Enter the times you actually fell asleep and woke up. They are saved exactly as you enter them.';
     document.getElementById('mnDelete').hidden = !entry;
     mnDate.value = toDateInput(d); mnSleep.value = s; mnWake.value = w;
     mnError.textContent = '';
@@ -1118,16 +854,14 @@
     var clashes = entries.filter(function (e) { return e.id !== id && nightKey(e) === dateKey(nightOfBed(m.bed)); });
     if (clashes.length) {
       var c = clashes[0];
-      var what = c.type === 'manual' ? 'logged manually (' + describeManual(c) + ')'
-        : 'recorded with button presses (' + (c.bed !== null ? 'bed ' + fmtTime(c.bed) : 'no bed time') + ', ' + (c.wake !== null ? 'wake ' + fmtTime(c.wake) : 'no wake time') + ')';
-      if (!confirm('The night of ' + fmtDay(nightOf(c)) + ' already has an entry, ' + what + '.\n\nReplace it with ' +
+      if (!confirm('The night of ' + fmtDay(nightOf(c)) + ' already has an entry (' + describeNight(c) + ').\n\nReplace it with ' +
           fmtTime(m.bed) + ' to ' + fmtTime(m.wake) + '?')) return;
       entries = entries.filter(function (e) { return clashes.indexOf(e) < 0; });
     }
-    if (mnEditing) { mnEditing.bed = m.bed; mnEditing.wake = m.wake; mnEditing.type = 'manual'; }
-    else entries.push({ id: newId(), bed: m.bed, wake: m.wake, type: 'manual' });
+    if (mnEditing) { mnEditing.bed = m.bed; mnEditing.wake = m.wake; }
+    else entries.push({ id: newId(), bed: m.bed, wake: m.wake });
     persistEntries(); render(); manualDlg.close();
-    toast('Saved: asleep ' + fmtTime(m.bed) + ', awake ' + fmtTime(m.wake) + ' (' + fmtDur(m.minutes) + '). Actual times, so no offsets applied.');
+    toast('Saved: asleep ' + fmtTime(m.bed) + ', awake ' + fmtTime(m.wake) + ' (' + fmtDur(m.minutes) + ').');
   });
 
   function removeEntry(id) {
@@ -1141,19 +875,15 @@
     return /[",\r\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
   }
   function exportCsv() {
-    // For type "manual", bed_press and wake_press hold the actual fell-asleep and woke-up times.
-    var rows = [['night', 'bed_press', 'wake_press', 'est_sleep', 'est_wake', 'sleep_minutes', 'flags', 'type']];
+    var rows = [['night', 'fell_asleep', 'woke_up', 'sleep_minutes', 'flags']];
     sortedEntries().forEach(function (e) {
       var r = analyze(e);
       rows.push([
         dateKey(r.night),
         e.bed !== null ? isoLocal(e.bed) : '',
         e.wake !== null ? isoLocal(e.wake) : '',
-        r.estSleep !== undefined ? isoLocal(r.estSleep) : '',
-        r.estWake !== undefined ? isoLocal(r.estWake) : '',
         r.valid ? Math.round(r.dur) : '',
-        r.flags.concat(r.warn ? [r.warn] : []).join('; '),
-        e.type
+        r.flags.concat(r.warn ? [r.warn] : []).join('; ')
       ]);
     });
     var text = rows.map(function (r) { return r.map(csvCell).join(','); }).join('\r\n') + '\r\n';
@@ -1190,16 +920,15 @@
     var rows = parseCsv(text);
     if (!rows.length) { toast('That file is empty.', 'error'); return; }
     var head = rows[0].map(function (h) { return h.trim().toLowerCase(); });
-    var iBed = head.indexOf('bed_press'), iWake = head.indexOf('wake_press'), iType = head.indexOf('type');
-    if (iBed < 0 || iWake < 0) { toast('Could not find "bed_press" and "wake_press" columns. Use a file made by Export CSV.', 'error'); return; }
+    // Older exports called these columns bed_press / wake_press; other columns (type, est_*) are ignored.
+    var iBed = Math.max(head.indexOf('fell_asleep'), head.indexOf('bed_press')), iWake = Math.max(head.indexOf('woke_up'), head.indexOf('wake_press'));
+    if (iBed < 0 || iWake < 0) { toast('Could not find "fell_asleep" and "woke_up" columns. Use a file made by Export CSV.', 'error'); return; }
     var byNight = {}, skipped = 0;
     rows.slice(1).forEach(function (r) {
       var b = (r[iBed] || '').trim(), w = (r[iWake] || '').trim();
       var bed = b ? new Date(b).getTime() : null, wake = w ? new Date(w).getTime() : null;
       if ((bed === null && wake === null) || Number.isNaN(bed) || Number.isNaN(wake)) { skipped++; return; }
-      var type = iType >= 0 ? (r[iType] || '').trim().toLowerCase() : '';
-      if (type !== TYPE_MANUAL && type !== TYPE_BUTTON) type = inferType(bed, wake); // older exports have no type column
-      var e = { id: newId(), type: type, bed: bed, wake: wake };
+      var e = { id: newId(), bed: bed, wake: wake };
       byNight[nightKey(e)] = e; // if the file repeats a night, the later row wins
     });
     var list = Object.keys(byNight).map(function (k) { return byNight[k]; });
@@ -1233,15 +962,8 @@
   }
 
   /* ---------- wiring ---------- */
-  document.getElementById('btnBed').addEventListener('click', pressBed);
-  document.getElementById('btnWake').addEventListener('click', pressWake);
-  document.getElementById('addBtn').addEventListener('click', function () { openEdit(null); });
+  document.getElementById('addBtn').addEventListener('click', function () { openManual(null); });
   document.getElementById('logBtn').addEventListener('click', function () { openManual(null); });
-  document.getElementById('edManual').addEventListener('click', function () {
-    var e = editing;
-    if (!e) return;
-    editDlg.close(); openManual(e);
-  });
   document.getElementById('themeBtn').addEventListener('click', function () {
     settings.theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
     persistSettings(); applyTheme();
@@ -1275,11 +997,7 @@
   document.getElementById('dayEdit').addEventListener('click', function () {
     var e = dayEntry(), p = dayKeyOpen.split('-');
     dayDlg.close();
-    if (e) openEdit(e.id); else openEdit(null, new Date(+p[0], +p[1] - 1, +p[2]));
-  });
-  document.getElementById('dayManual').addEventListener('click', function () {
-    var p = dayKeyOpen.split('-');
-    dayDlg.close(); openManual(null, new Date(+p[0], +p[1] - 1, +p[2]));
+    if (e) openManual(e); else openManual(null, new Date(+p[0], +p[1] - 1, +p[2]));
   });
   document.getElementById('dayDelete').addEventListener('click', function () {
     var e = dayEntry();
@@ -1289,25 +1007,14 @@
   document.addEventListener('click', function (ev) {
     var t = ev.target.closest && ev.target.closest('[data-edit],[data-del]');
     if (!t) return;
-    if (t.hasAttribute('data-edit')) openEdit(t.getAttribute('data-edit'));
+    if (t.hasAttribute('data-edit')) openManual(entries.find(function (x) { return x.id === t.getAttribute('data-edit'); }));
     else {
       var e = entries.find(function (x) { return x.id === t.getAttribute('data-del'); });
       if (e && confirm('Delete the night of ' + fmtDay(nightOf(e)) + '?')) removeEntry(e.id);
     }
   });
 
-  var setSleep = document.getElementById('setSleep'), setWake = document.getElementById('setWake');
-  setSleep.value = settings.sleepOffset; setWake.value = settings.wakeOffset;
   document.getElementById('setWeekend').value = settings.weekend;
-  function offsetHandler(key, input) {
-    return function () {
-      var v = parseFloat(input.value);
-      if (!isFinite(v) || v < 0 || v > 600) return; // ignore half-typed values
-      settings[key] = v; persistSettings(); render();
-    };
-  }
-  setSleep.addEventListener('input', offsetHandler('sleepOffset', setSleep));
-  setWake.addEventListener('input', offsetHandler('wakeOffset', setWake));
   document.getElementById('setWeekend').addEventListener('change', function (ev) {
     settings.weekend = ev.target.value; persistSettings(); render();
   });
